@@ -41,6 +41,7 @@ export class Narrator {
         return s;
       };
       this.voice = [...voices].sort((a, b) => score(b) - score(a))[0] ?? null;
+      if (this.voice) console.info(`[narrator] voice: ${this.voice.name}`);
     };
     choose();
     // Voices frequently aren't ready on first call.
