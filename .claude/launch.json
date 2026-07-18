@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "planets",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "threejs-procedural-planets"],
+      "port": 5173
+    },
+    {
+      "name": "worlds",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "movie"],
+      "port": 5180
+    }
+  ]
+}

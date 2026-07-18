@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Worlds — set</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="hud">
+      <div id="hud-title">THE WORLDS</div>
+      <div id="hud-world">booting…</div>
+      <div id="hud-controls">
+        <button data-scene="orbit">Orbit</button>
+        <button data-scene="surface">Surface</button>
+        <button id="reroll">New seed</button>
+      </div>
+      <div id="hud-biomes"></div>
+      <div id="hud-stats"></div>
+      <div id="hud-help">
+        drag look · WASD move · Q/E down/up · shift sprint · scroll speed · F walk
+      </div>
+    </div>
+    <div id="loading" hidden>generating…</div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
