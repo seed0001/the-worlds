@@ -61,13 +61,13 @@ export function buildEpisode1Script(cosmos) {
     'Everything that will ever exist is here — not spread across a universe, because there is no universe yet for it to spread across. Only energy, waiting.',
     'And yet everything is already present. Every star that will ever burn, every world, every drop of every ocean — folded into a single point of pure energy, waiting.',
     'All of it is here already. Not stored, not arranged — just energy, all of it, everywhere at once, because there is nowhere else to be.',
-  ), { hold: 5 });
+  ), { direct: { phase: 'point' }, hold: 5 });
 
   say(pick(
     'Watch what a handful of rules — energy, gravity, light, and the elements they build — can make out of that.',
     'What follows is not a miracle. It is a handful of rules — energy, gravity, light — applied without mercy and without pause, for a very long time. Watch.',
     'This film is about what happens next: how a few blunt rules, given enough time, turn that into everything.',
-  ), { hold: 4 });
+  ), { direct: { phase: 'strain' }, hold: 4 });
 
   // --- 2. The Big Bang ------------------------------------------------------
   say(pick(
@@ -80,7 +80,7 @@ export function buildEpisode1Script(cosmos) {
     'For the first instants it is too hot for matter to hold together. Energy and particles trade places freely, faster than the eye of any instrument could ever follow.',
     'In these first instants, nothing can hold its shape. Particles flash into existence and are annihilated in the same breath — matter and energy trading places faster than measurement itself.',
     'The young universe is too hot to keep anything. Whatever forms is torn apart at once; energy becomes matter becomes energy, over and over, trillions of times a second.',
-  ), { hold: 5 });
+  ), { direct: { phase: 'foam' }, hold: 5 });
 
   say(pick(
     'As it cools, the first matter freezes out of pure energy. And here the universe has almost no choice in what to make.',
@@ -98,7 +98,7 @@ export function buildEpisode1Script(cosmos) {
     'That is the entire inventory of the young universe. Every richer thing — every rock, every ocean, every living cell that this story will arrive at — has to be built later, from these two ingredients.',
     'Hold on to that. Two ingredients. Every rock, every sea, every cell this story will ever reach must somehow be assembled from those two — because there is nothing else in stock.',
     'So the pantry of the universe holds exactly two things. Everything else — iron, water, bone — is not missing. It simply has not been invented yet.',
-  ), { hold: 5 });
+  ), { direct: { phase: 'inventory' }, hold: 5 });
 
   say(pick(
     'For now the cosmos is a fog: matter and light tangled together, opaque, glowing.',
@@ -123,7 +123,7 @@ export function buildEpisode1Script(cosmos) {
     'Gravity pulls matter toward matter. The dense places grow denser, draining the space around them, until clouds of hydrogen and helium collapse under their own weight.',
     'Matter pulls on matter. The rich grow richer: dense regions drain their surroundings, gathering into filaments and knots, until whole clouds of hydrogen and helium are falling inward under their own weight.',
     'Gravity amplifies every flaw. Each slightly-denser region pulls harder, gathers more, pulls harder still — until the gas of the universe is draped into filaments, and the knots in them begin to collapse.',
-  ), { hold: 5 });
+  ), { direct: { phase: 'gravity' }, hold: 5 });
 
   say(pick(
     'Squeeze hydrogen hard enough and it ignites. Nuclei fuse, and a star switches on — pouring out light, and holding itself up against gravity by the heat of its own fusion.',
@@ -141,7 +141,7 @@ export function buildEpisode1Script(cosmos) {
     'But fusion pays out less and less energy as it climbs, and it stops cold at iron. To build iron and beyond takes something more violent than a living star.',
     'But the ladder has a top. Each rung of fusion pays out less energy than the last, and at iron it pays nothing at all. A living star can climb no further. Beyond iron, the forge must be something worse.',
     'There is a limit, though. Fusion earns less with every step, and at iron the account runs dry. Nothing heavier can be made by a star that intends to survive.',
-  ), { hold: 5 });
+  ), { direct: { phase: 'iron' }, hold: 5 });
 
   say(pick(
     'A massive star, running out of fuel, collapses and detonates — a single blast outshining a galaxy, forging the heaviest elements and blasting everything it ever made back into space.',
