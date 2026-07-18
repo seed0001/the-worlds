@@ -143,18 +143,36 @@ export class Teaser {
     let t = 0;
 
     if (shot === 'descend') {
-      // Glide down out of the sky toward the landing site, ending at eye level
-      // looking across the terrain toward the sun.
+      // Glide down out of the sky, ending at eye level looking toward the sun.
+      // The patch is forested with no clearance around the landing site, so a
+      // naive path flies straight through trunks and canopy — which is a black
+      // wall filling the frame. Flora records where every tree stands: land in
+      // an actual clearing, and stay above the whole canopy until the drop.
       const sunDir = scene.sunDirection;
+      const trees = scene.flora?.placements ?? [];
+      const isClear = (x, z, r2) => !trees.some((p) => {
+        const dx = p.x - x, dz = p.z - z;
+        return dx * dx + dz * dz < r2;
+      });
+      let end = { x: 0, z: 0 };
+      outer:
+      for (let r = 0; r <= 360; r += 30) {
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+          const x = Math.sin(a) * r, z = Math.cos(a) * r;
+          if (isClear(x, z, 24 * 24)) { end = { x, z }; break outer; }
+        }
+      }
       scene.cameraDriver = (camera, dt) => {
         t += dt;
         const k = ss(0, 12, t);
-        const x = -650 * (1 - k);
-        const z = -650 * (1 - k);
-        const yPath = ground(x, z) + 3 + (1 - k) * 220;
-        camera.position.set(x, Math.max(yPath, ground(x, z) + 2.2), z);
-        const lx = x + sunDir.x * 400, lz = z + sunDir.z * 400;
-        camera.lookAt(lx, ground(0, 0) + 24 + (1 - k) * 60, lz);
+        const x = end.x - 260 * (1 - k);
+        const z = end.z - 260 * (1 - k);
+        // Tallest trees run ~38 m; hold 46 m of clearance until the last
+        // stretch, then sink into the clearing.
+        const canopy = 46 * Math.min(1, (1 - k) * 3);
+        camera.position.set(x, ground(x, z) + 4 + canopy + (1 - k) * 150, z);
+        const lx = x + sunDir.x * 500, lz = z + sunDir.z * 500;
+        camera.lookAt(lx, ground(end.x, end.z) + 15 + (1 - k) * 50, lz);
       };
       return;
     }
