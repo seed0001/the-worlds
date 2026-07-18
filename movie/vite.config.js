@@ -52,6 +52,11 @@ function ttsPlugin() {
 export default {
   server: { port: 5180 },
   plugins: [ttsPlugin()],
+  // ez-tree is a file: dependency whose bundle imports `three` and expects the
+  // app to supply it. npm links file: deps, and from the linked real path the
+  // resolver can't walk back into movie/node_modules — dedupe pins `three` to
+  // this project's copy no matter where the import comes from.
+  resolve: { dedupe: ['three'] },
   build: {
     target: 'es2022', // the entry modules use top-level await
     rollupOptions: {
