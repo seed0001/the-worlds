@@ -61,12 +61,8 @@ start "The Worlds - server (close this window to stop)" cmd /k "npm run dev"
 echo   Waiting for the server to come up...
 timeout /t 6 /nobreak >nul
 
-REM Edge specifically: the narrator's Andrew voice (Microsoft Andrew Online
-REM Natural) is only exposed to web pages by Edge - Chrome and others fall
-REM back to the old robotic SAPI voices.
-echo   Opening Episode 1 in Microsoft Edge...
-start "" msedge "http://localhost:5180/episode1.html"
-if errorlevel 1 start "" "http://localhost:5180/episode1.html"
+echo   Opening Episode 1 in your browser...
+start "" "http://localhost:5180/episode1.html"
 
 echo.
 echo   ================================================================
