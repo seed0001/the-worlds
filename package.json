@@ -6,7 +6,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "npm --prefix movie install && npm --prefix movie run build",
+    "build": "npm --prefix movie install --include=dev --ignore-scripts && npm --prefix movie run build",
     "start": "node movie/server.js"
   }
 }
