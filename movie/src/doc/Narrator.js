@@ -30,10 +30,11 @@ export class Narrator {
     const choose = () => {
       const voices = this.synth.getVoices();
       if (!voices.length) return;
-      // Prefer an English natural/neural voice; fall back to the first English
-      // one, then to whatever exists.
+      // Prefer Microsoft's Andrew voice; fall back to an English
+      // natural/neural voice, then the first English one, then whatever exists.
       const score = (v) => {
         let s = 0;
+        if (/andrew/i.test(v.name)) s += 10;
         if (/en[-_]/i.test(v.lang)) s += 4;
         if (/natural|neural|online/i.test(v.name)) s += 3;
         if (/^en-US/i.test(v.lang)) s += 1;
