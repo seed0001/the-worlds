@@ -33,7 +33,7 @@ els.titleSub.textContent = script.subtitle;
 
 const stage = new Stage();
 const scenes = {
-  bigbang: new BigBangScene(),
+  bigbang: new BigBangScene(cosmos),
   system: new SystemScene(cosmos),
 };
 stage.register('bigbang', scenes.bigbang);
