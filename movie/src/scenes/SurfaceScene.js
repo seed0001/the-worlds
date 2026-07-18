@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Surface } from '../surface/Surface.js';
 import { Flora } from '../surface/Flora.js';
+import { Fauna } from '../fauna/Fauna.js';
 import { FlyCamera } from '../core/FlyCamera.js';
 
 // Act-two stage: standing on the world act one showed from orbit.
@@ -43,8 +44,14 @@ void main() {
 `;
 
 export class SurfaceScene {
-  constructor(world, { patchSize = 3000, resolution = 320 } = {}) {
+  /**
+   * `cinematic: true` skips the FlyCamera — the caller drives the camera by
+   * assigning `this.cameraDriver = (camera, dt) => …` (the teaser does this).
+   */
+  constructor(world, { patchSize = 3000, resolution = 320, cinematic = false } = {}) {
     this.world = world;
+    this.cinematic = cinematic;
+    this.cameraDriver = null;
     this.scene = new THREE.Scene();
     this.bloom = { strength: 0.18, radius: 0.5, threshold: 0.85 };
     this.ready = false;
@@ -131,20 +138,29 @@ export class SurfaceScene {
     this.treeCount = this.flora.populate();
     this.scene.add(this.flora.group);
 
+    // Wildlife — every species this world rolled, hatched onto the patch.
+    this.fauna = new Fauna(world, this.surface);
+    this.faunaCount = this.fauna.populate();
+    this.scene.add(this.fauna.group);
+
     // Camera rig. Start at eye height on the site, looking at the horizon.
-    this.controls = new FlyCamera(this.camera, document.querySelector('canvas'), {
-      speed: 80,
-      groundHeight: (x, z) => this.surface.heightAt(x, z),
-    });
     this.camera.position.set(0, this.surface.heightAt(0, 0) + 2.0, 0);
-    this.controls._yaw = Math.PI * 0.15;
-    this.controls._pitch = -0.04;
+    if (!this.cinematic) {
+      this.controls = new FlyCamera(this.camera, document.querySelector('canvas'), {
+        speed: 80,
+        groundHeight: (x, z) => this.surface.heightAt(x, z),
+      });
+      this.controls._yaw = Math.PI * 0.15;
+      this.controls._pitch = -0.04;
+    }
 
     this.ready = true;
   }
 
   update(dt) {
-    this.controls?.update(dt);
+    if (this.cameraDriver) this.cameraDriver(this.camera, dt);
+    else this.controls?.update(dt);
+    this.fauna?.update(dt);
     // Sky rides with the camera; the dome is finite and the patch is 3 km wide.
     this.sky?.position.copy(this.camera.position);
     if (this.sun) {
@@ -166,6 +182,7 @@ export class SurfaceScene {
 
   dispose() {
     this.controls?.dispose();
+    this.fauna?.dispose();
     this.flora?.dispose();
     this.surface?.dispose();
     this.sky?.geometry.dispose();

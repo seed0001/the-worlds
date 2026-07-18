@@ -1,4 +1,8 @@
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
+
+const root = dirname(fileURLToPath(import.meta.url));
 
 // /api/tts?text=... — narration audio in the Microsoft Andrew neural voice.
 //
@@ -48,6 +52,16 @@ function ttsPlugin() {
 export default {
   server: { port: 5180 },
   plugins: [ttsPlugin()],
+  build: {
+    target: 'es2022', // the entry modules use top-level await
+    rollupOptions: {
+      input: {
+        main: resolve(root, 'index.html'),      // the site: splash, trailer, episode
+        episode1: resolve(root, 'episode1.html'), // legacy deep links, redirects to /
+        set: resolve(root, 'set.html'),          // the set browser (dev tool)
+      },
+    },
+  },
   // ez-tree ships its lib as a prebuilt ES bundle with `three` left external,
   // so the alias below is only needed if we switch to consuming its source.
   optimizeDeps: { exclude: ['@dgreenheck/ez-tree'] },

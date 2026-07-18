@@ -10,6 +10,7 @@ import { Starfield } from '../space/Starfield.js';
 export class OrbitScene {
   constructor(world, { interactive = true } = {}) {
     this.world = world;
+    this.cameraDriver = null; // non-interactive callers animate the camera here
     this.scene = new THREE.Scene();
 
     this.camera = new THREE.PerspectiveCamera(
@@ -52,7 +53,8 @@ export class OrbitScene {
   update(dt, elapsed) {
     this.planet.update(elapsed, dt);
     this.starfield.update(this.camera);
-    this.controls?.update();
+    if (this.cameraDriver) this.cameraDriver(this.camera, dt, elapsed);
+    else this.controls?.update();
   }
 
   dispose() {

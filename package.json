@@ -1,0 +1,12 @@
+{
+  "name": "the-worlds-site",
+  "private": true,
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm --prefix movie install && npm --prefix movie run build",
+    "start": "node movie/server.js"
+  }
+}
