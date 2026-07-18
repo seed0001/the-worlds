@@ -59,7 +59,10 @@ export class SurfaceScene {
     this.camera = new THREE.PerspectiveCamera(
       42, // a slightly long lens — wide angles make terrain look like a diorama
       window.innerWidth / window.innerHeight,
-      0.1,
+      // Scripted shots fly through inhabited air: a bird wing millimetres from
+      // the lens is a frame-filling black wall. An arm's-length near plane
+      // clips it away instead. Hand-flown cameras keep the tighter plane.
+      cinematic ? 1.5 : 0.1,
       40000,
     );
 

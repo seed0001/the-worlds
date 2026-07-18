@@ -162,11 +162,21 @@ export class Teaser {
           if (isClear(x, z, 24 * 24)) { end = { x, z }; break outer; }
         }
       }
+      // The flock owns the air near the site (anchor within 250 m, cruising at
+      // exactly glide height) — approach from the opposite side, so distance to
+      // the birds grows with altitude instead of the corridor threading them.
+      let ux = -Math.SQRT1_2, uz = -Math.SQRT1_2;
+      const airPop = scene.fauna?.populations.find((p) => p.genome.domain === 'air');
+      if (airPop) {
+        const dx = end.x - airPop.anchor.x, dz = end.z - airPop.anchor.z;
+        const d = Math.hypot(dx, dz);
+        if (d > 1) { ux = dx / d; uz = dz / d; }
+      }
       scene.cameraDriver = (camera, dt) => {
         t += dt;
         const k = ss(0, 12, t);
-        const x = end.x - 260 * (1 - k);
-        const z = end.z - 260 * (1 - k);
+        const x = end.x + ux * 260 * (1 - k);
+        const z = end.z + uz * 260 * (1 - k);
         // Tallest trees run ~38 m; hold 46 m of clearance until the last
         // stretch, then sink into the clearing.
         const canopy = 46 * Math.min(1, (1 - k) * 3);
