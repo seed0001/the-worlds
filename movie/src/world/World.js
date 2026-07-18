@@ -22,8 +22,13 @@ export class World {
   /**
    * @param {string} seed - any string; same seed always yields the same world
    * @param {string} [biomeKey] - force a biome, otherwise picked from the seed
+   * @param {object} [physical] - overrides for the world's physical scale, used
+   *   by System.js so the five planets of a system aren't all the same size.
+   *   Applied AFTER all rng rolls so overriding never shifts the rng stream —
+   *   the same seed+biome yields the same terrain whether or not it's in a
+   *   system. Accepts { radiusMetres, heightScaleMetres, dayLength }.
    */
-  constructor(seed, biomeKey = null) {
+  constructor(seed, biomeKey = null, physical = {}) {
     this.seed = seed;
     const rng = makeRng(seed);
     this.rng = rng;
@@ -95,6 +100,20 @@ export class World {
     this.dayLength = rng.range(40, 140); // seconds of screen time per rotation
 
     this.rotationPeriod = rng.range(0.008, 0.02); // orbital-view spin, rad/s
+
+    // Physical overrides last — see the constructor doc for why.
+    if (physical.radiusMetres) this.radiusMetres = physical.radiusMetres;
+    if (physical.heightScaleMetres) this.heightScaleMetres = physical.heightScaleMetres;
+    if (physical.dayLength) this.dayLength = physical.dayLength;
+  }
+
+  /**
+   * Surface gravity relative to the 3000 km baseline world. Same rock density
+   * assumed everywhere, so g scales linearly with radius. This is the single
+   * number that makes a big planet's animals stocky and a small planet's leggy.
+   */
+  get gravity() {
+    return this.radiusMetres / 3_000_000;
   }
 
   /**

@@ -12,9 +12,18 @@
 /** [min, max] — rolled per seed. A bare number means "no variation". */
 const R = (min, max) => ({ min, max });
 
+// Fauna entries are the recipe for a species, not its body. Each entry names a
+// species, its social structure (`role`: flock | herd | solitary | swarm) and
+// where it lives (`domain`: air | ground), plus a few morphology hints (legs,
+// neck, tail — in units of body size). Everything else about the animal — leg
+// length, wing span, flap rate, coloration, gait — is derived in fauna/genome.js
+// from the PLANET: its gravity, its air density, its temperature, its terrain.
+// The same "grazer" recipe grows a different animal on a different world.
+
 export const BIOMES = {
   temperate: {
     label: 'Temperate',
+    temperatureC: 15,
     // The default act-two world: oceans, green lowland, snow caps. Survivable.
     terrain: {
       type: 2,
@@ -60,13 +69,15 @@ export const BIOMES = {
       altitude: R(0.02, 0.34), // terrain-height band (orbital units) trees occupy
     },
     fauna: [
-      { species: 'skimmer', role: 'flock', count: R(40, 90), domain: 'air' },
-      { species: 'grazer', role: 'herd', count: R(8, 20), domain: 'ground' },
+      { species: 'skimmer', role: 'flock', count: R(40, 90), domain: 'air', sizeM: R(0.5, 0.9) },
+      { species: 'grazer', role: 'herd', count: R(8, 20), domain: 'ground', sizeM: R(1.4, 2.2), legs: 4, neck: R(0.6, 1.2), tail: R(0.5, 0.9) },
+      { species: 'strider', role: 'herd', count: R(3, 7), domain: 'ground', sizeM: R(2.6, 3.6), legs: 2, neck: R(1.2, 1.8), tail: R(0.8, 1.2) },
     ],
   },
 
   arid: {
     label: 'Arid',
+    temperatureC: 48,
     terrain: {
       type: 2,
       amplitude: R(0.7, 1.0),
@@ -105,13 +116,15 @@ export const BIOMES = {
       altitude: R(0.0, 0.5),
     },
     fauna: [
-      { species: 'skimmer', role: 'flock', count: R(10, 25), domain: 'air' },
-      { species: 'stalker', role: 'solitary', count: R(2, 5), domain: 'ground' },
+      { species: 'duneskimmer', role: 'flock', count: R(10, 25), domain: 'air', sizeM: R(0.35, 0.6) },
+      { species: 'stalker', role: 'solitary', count: R(2, 5), domain: 'ground', sizeM: R(1.1, 1.7), legs: 4, neck: R(0.3, 0.5), tail: R(1.2, 1.8) },
+      { species: 'scuttler', role: 'swarm', count: R(20, 45), domain: 'ground', sizeM: R(0.2, 0.4), legs: 6, tail: R(0.3, 0.6) },
     ],
   },
 
   frozen: {
     label: 'Frozen',
+    temperatureC: -45,
     terrain: {
       type: 3, // ridged — glacial fracture lines
       amplitude: R(1.1, 1.6),
@@ -148,11 +161,15 @@ export const BIOMES = {
       maxSlope: 0.68,
       altitude: R(0.02, 0.22),
     },
-    fauna: [{ species: 'grazer', role: 'herd', count: R(6, 14), domain: 'ground' }],
+    fauna: [
+      { species: 'shagback', role: 'herd', count: R(6, 14), domain: 'ground', sizeM: R(1.8, 2.8), legs: 4, neck: R(0.25, 0.45), tail: R(0.2, 0.4), shaggy: 1 },
+      { species: 'frostskimmer', role: 'flock', count: R(15, 40), domain: 'air', sizeM: R(0.4, 0.7) },
+    ],
   },
 
   volcanic: {
     label: 'Volcanic',
+    temperatureC: 115,
     terrain: {
       type: 3,
       amplitude: R(1.3, 1.9),
@@ -181,11 +198,16 @@ export const BIOMES = {
       detail: { amplitudeM: 45, periodM: 350, persistence: 0.55, lacunarity: 2.1, octaves: 7 },
     },
     flora: null,
-    fauna: [{ species: 'stalker', role: 'solitary', count: R(1, 4), domain: 'ground' }],
+    fauna: [
+      { species: 'cinderstalker', role: 'solitary', count: R(1, 4), domain: 'ground', sizeM: R(1.6, 2.4), legs: 4, neck: R(0.2, 0.4), tail: R(1.0, 1.6), armored: 1 },
+      { species: 'ashmite', role: 'swarm', count: R(15, 35), domain: 'ground', sizeM: R(0.15, 0.3), legs: 6, armored: 1 },
+    ],
   },
 
   barren: {
     label: 'Barren',
+    // Airless: no weather, so the number is a day-side average nobody enjoys.
+    temperatureC: -60,
     terrain: {
       type: 2,
       amplitude: R(0.5, 0.9),
@@ -214,7 +236,11 @@ export const BIOMES = {
       detail: { amplitudeM: 30, periodM: 500, persistence: 0.5, lacunarity: 2.0, octaves: 6 },
     },
     flora: null,
-    fauna: [],
+    // No air means no fliers and nothing soft-bodied — but a movie planet with
+    // zero life is a wasted location. Silicate skitterers live in the regolith.
+    fauna: [
+      { species: 'skitterer', role: 'swarm', count: R(8, 20), domain: 'ground', sizeM: R(0.2, 0.35), legs: 8, tail: R(0.2, 0.4), armored: 1 },
+    ],
   },
 };
 
