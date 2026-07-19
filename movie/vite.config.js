@@ -64,6 +64,7 @@ export default {
         main: resolve(root, 'index.html'),      // the site: splash, trailer, episode
         episode1: resolve(root, 'episode1.html'), // legacy deep links, redirects to /
         set: resolve(root, 'set.html'),          // the set browser (dev tool)
+        soup: resolve(root, 'soup.html'),        // Episode 2, Act 2 — the soup (dev set-piece)
       },
     },
   },
