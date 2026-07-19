@@ -36,13 +36,20 @@ const eco=await p.evaluate(()=>{
 // drive the whole cue list through the real director, fast — and check that
 // each Act 4 event actually moved the population it names.
 const seen=await p.evaluate(async()=>{
-  const {script,director,stage}=window.__ep2; const seen={}; const events=[];
+  const {script,director,stage}=window.__ep2; const seen={}; const events=[]; const lockedFrames=[];
+  const LOCKED=new Set(['sterile','stained','greening','rooted','firstmovers','fullroster']);
   window.__ep2.narrator.muted=true;
   const surface=stage.scenes.get('surface');
   for(let i=0;i<script.cues.length;i++){
     const cue=script.cues[i];
     try{ await director(cue); }catch(e){ return {error:'director cue '+i+': '+e.message}; }
     const n=stage.active?.constructor?.name??'none'; seen[n]=(seen[n]||0)+1;
+    // Act 3's locked frame: run the driver a step and record the transform —
+    // all six era cues must land the camera on the identical position+aim.
+    if(LOCKED.has(cue.direct?.phase)&&stage.active?.cameraDriver){
+      stage.active.cameraDriver(stage.active.camera,1/60);
+      lockedFrames.push([...stage.active.camera.position.toArray(),...stage.active.camera.quaternion.toArray()]);
+    }
     const ev=cue.direct?.event;
     if(ev&&surface?.fauna?.cast){
       const c=surface.fauna.cast;
@@ -58,7 +65,7 @@ const seen=await p.evaluate(async()=>{
     }
     await new Promise(r=>setTimeout(r,60));
   }
-  return {seen,events};
+  return {seen,events,lockedFrames};
 });
 await b.close();
 console.log('script:',JSON.stringify(info));
@@ -68,6 +75,13 @@ console.log('act-4 events:',JSON.stringify(seen.events??[]));
 console.log('scenes activated across cues:',JSON.stringify(seen.seen||seen));
 let bad=false;
 if(seen.error){console.error('FAIL:',seen.error);process.exit(2);}
+const lf=seen.lockedFrames??[];
+if(lf.length&&eco.roster){
+  if(lf.length!==6){console.error('FAIL: expected 6 locked-frame era cues, saw',lf.length);bad=true;}
+  const drift=lf.some(f=>f.some((v,j)=>Math.abs(v-lf[0][j])>1e-9));
+  if(drift){console.error('FAIL: Act 3 camera moved between era cues:',JSON.stringify(lf));bad=true;}
+  else console.log('locked frame: '+lf.length+' era cues, camera identical.');
+}
 for(const f of eco.fails??[]){console.error('FAIL:',f);bad=true;}
 for(const e of seen.events??[]) if(/DID-NOT-FIRE/.test(e)){console.error('FAIL: event',e);bad=true;}
 if(errs.length){console.log('ERRORS:');errs.slice(0,10).forEach(e=>console.log('  '+e));process.exit(1);}

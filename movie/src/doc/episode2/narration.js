@@ -166,15 +166,15 @@ export function buildEpisode2Script(cosmos, world) {
   ), { scene: 'surface', direct: { era: 3, phase: 'rooted' }, hold: 7 });
 
   say(pick(
-    'And then something moves that is not the wind. Small, low, close to the ground — the first animals, feeding on the forest that fed on the light. Tentative. But it moves on its own account.',
-    'Watch the undergrowth. There — and there. The first movers: little things, swarm-scale, no bigger than they have to be, testing a world that has never had to be tested. Life has learned to go and get its food instead of waiting for it.',
-    'Up to now everything in this valley has stayed where it grew. No longer. The first fauna appear — small, wary, near the ground — and for the first time the valley contains something that can decide to be somewhere else.',
-  ), { scene: 'surface', direct: { era: 4, phase: 'firstmovers', focus: 'speciesD' }, hold: 6 });
+    'And then something moves that is not the wind. Look at the air over the shore — it has come alive. The first animals, riding the sky above the forest that fed on the light. Tentative. But they move on their own account.',
+    'Watch the sky over the water. That drift is not weather — it is the first movers, airborne in numbers, and far off at the edge of the frame something smaller is testing the open ground. Life has learned to go and get its food instead of waiting for it.',
+    'Up to now everything in this frame has stayed where it grew. No longer. Motion enters the valley — wings over the shallows, a faint restlessness in the far distance — and for the first time this world contains something that can decide to be somewhere else.',
+  ), { scene: 'surface', direct: { era: 4, phase: 'firstmovers' }, hold: 6 });
 
   say(pick(
-    `Now the cast arrives in waves. Grazers, then the things that hunt them, then the things that clean up after both — ${speciesCount} species in all, until the valley is as crowded as it will ever be. And every one of them was folded out of that first stain. Nothing was added from outside.`,
-    `Wave on wave, the roster fills: ${speciesCount} kinds of animal, each one a different answer worked out from the same starting chemistry. Rewind it and you would find no seam, no import, no outside hand — only era one, run longer.`,
-    `The full roster, at full number: ${speciesCount} species sharing one valley. It looks designed. It was not. It is what you get when a single pool of self-copying chemistry is left alone with the light for long enough.`,
+    `Now the shore fills. Grazers come down to the water; the flock thickens over the shallows — this valley gathering its own kinds, while over every horizon the same slow crowding happens in other shapes. ${speciesCount} species now share this world, and every one of them was folded out of that first stain. Nothing was added from outside.`,
+    `Wave on wave, life claims the frame — herds on the ground, fliers over the water. And this shore is only keeping its share: across the planet the roster has filled to ${speciesCount} kinds of animal, each one a different answer worked out from the same starting chemistry. Rewind it and you would find no seam, no import, no outside hand — only era one, run longer.`,
+    `The valley settles into its cast — the herds, the flock above them — and it looks complete. It is not even the whole story: ${speciesCount} species now live on this world, most of them beyond that ridge, in country we have not seen. It looks designed. It was not. It is what one pool of self-copying chemistry does, left alone with the light for long enough.`,
   ), { scene: 'surface', direct: { era: 5, phase: 'fullroster' }, hold: 7 });
 
   say(pick(

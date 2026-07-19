@@ -112,6 +112,10 @@ function surfaceStaging(scene) {
   return scene._ep2Staging;
 }
 
+// Act 3's deep-time eras all play inside ONE locked frame — the narration
+// stakes itself on "the camera will not move", so the camera must not move.
+const LOCKED_PHASES = new Set(['sterile', 'stained', 'greening', 'rooted', 'firstmovers', 'fullroster']);
+
 function driveSurface(scene, dir, index) {
   const sea = scene.seaLevelLocal ?? scene.surface.bounds?.seaLevelLocal ?? -Infinity;
   // Ground you can stand on: real terrain, but never below the water surface —
@@ -120,6 +124,53 @@ function driveSurface(scene, dir, index) {
   const sun = scene.sunDirection ?? new THREE.Vector3(0.35, 0.42, 0.84);
   const { clearing, canopyTop } = surfaceStaging(scene);
   let t = 0;
+
+  // Scout a shot before flying it: on rolling forested terrain ANY fixed orbit
+  // sometimes parks a hillside crown on the sightline, and one crown at 60 m
+  // fills half the lens. March the camera→site ray at two dozen azimuths and
+  // pick the one with the most clearance over terrain and canopy; if even the
+  // best lane is blocked, climb by the deficit (the target end of the ray is
+  // open ground, so raising the camera raises the whole sightline).
+  const scout = (cx, cz, dist, elev, seed) => {
+    const targetY = surfaceY(cx, cz) + elev * 0.35;
+    let bestAz = seed, bestMargin = -Infinity;
+    for (let k = 0; k < 24; k++) {
+      const az = seed + (k / 24) * Math.PI * 2;
+      const x0 = cx + Math.sin(az) * dist, z0 = cz + Math.cos(az) * dist;
+      const y0 = Math.max(surfaceY(x0, z0) + elev, canopyTop(x0, z0, 30) + 10);
+      let margin = Infinity;
+      for (let f = 0.08; f < 0.92; f += 0.07) {
+        const x = x0 + (cx - x0) * f, z = z0 + (cz - z0) * f;
+        const ray = y0 + (targetY - y0) * f;
+        const blocker = Math.max(surfaceY(x, z) + 2, canopyTop(x, z, 16));
+        margin = Math.min(margin, ray - blocker);
+      }
+      if (margin > bestMargin) { bestMargin = margin; bestAz = az; }
+    }
+    return { bestAz, elevBoost: Math.max(0, 12 - bestMargin), targetY };
+  };
+
+  if (LOCKED_PHASES.has(dir.phase)) {
+    // One framing of the shore, chosen once per scene and reused verbatim by
+    // every era cue: same position, same target, zero drift. Six eras, one
+    // frame — the only thing allowed to change is time.
+    const shot = (scene._ep2LockedShot ??= (() => {
+      const dist = 200, elev = 85;
+      const { bestAz, elevBoost, targetY } = scout(clearing.x, clearing.z, dist, elev, 0.7);
+      const x = clearing.x + Math.sin(bestAz) * dist;
+      const z = clearing.z + Math.cos(bestAz) * dist;
+      const y = Math.max(surfaceY(x, z) + elev + elevBoost, canopyTop(x, z, 30) + 10);
+      return {
+        pos: new THREE.Vector3(x, y, z),
+        target: new THREE.Vector3(clearing.x, targetY, clearing.z),
+      };
+    })());
+    scene.cameraDriver = (camera) => {
+      camera.position.copy(shot.pos);
+      camera.lookAt(shot.target);
+    };
+    return;
+  }
 
   if (dir.phase === 'descent') {
     // Glide down out of the sky into the clearing, looking toward the sun so
@@ -222,30 +273,7 @@ function driveSurface(scene, dir, index) {
   const elev = (wide ? 110 : 70) + (index % 4) * 15;
   const dirSign = index % 2 ? 1 : -1;
   const cx = at.x, cz = at.z;
-  // Scout the shot before flying it: on rolling forested terrain ANY fixed
-  // orbit sometimes parks a hillside crown on the sightline, and one crown at
-  // 60 m fills half the lens. March the camera→site ray at two dozen azimuths
-  // and fly the one with the most clearance over terrain and canopy.
-  const targetY = surfaceY(cx, cz) + elev * 0.35;
-  let bestAz = seed, bestMargin = -Infinity;
-  for (let k = 0; k < 24; k++) {
-    const az = seed + (k / 24) * Math.PI * 2;
-    const x0 = cx + Math.sin(az) * dist, z0 = cz + Math.cos(az) * dist;
-    const y0 = Math.max(surfaceY(x0, z0) + elev, canopyTop(x0, z0, 30) + 10);
-    let margin = Infinity;
-    for (let f = 0.08; f < 0.92; f += 0.07) {
-      const x = x0 + (cx - x0) * f, z = z0 + (cz - z0) * f;
-      const ray = y0 + (targetY - y0) * f;
-      const blocker = Math.max(surfaceY(x, z) + 2, canopyTop(x, z, 16));
-      margin = Math.min(margin, ray - blocker);
-    }
-    if (margin > bestMargin) { bestMargin = margin; bestAz = az; }
-  }
-  // Even the best lane can be blocked — a hill 50 m higher than the camera's
-  // ground puts an ordinary tree at lens height. Climb by the deficit: the
-  // target end of the ray is inside the clearing (clear by construction), so
-  // raising the camera raises the whole sightline over the blocker.
-  const elevBoost = Math.max(0, 12 - bestMargin);
+  const { bestAz, elevBoost, targetY } = scout(cx, cz, dist, elev, seed);
   scene.cameraDriver = (camera, dt) => {
     t += dt;
     const az = bestAz + dirSign * t * 0.02; // slow drift stays inside the scouted lane
