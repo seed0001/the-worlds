@@ -3,6 +3,7 @@ import { Water } from 'three/addons/objects/Water.js';
 import { Surface } from '../surface/Surface.js';
 import { Flora } from '../surface/Flora.js';
 import { Fauna } from '../fauna/Fauna.js';
+import { castGenomes, findCastSites } from '../fauna/cast.js';
 import { FlyCamera } from '../core/FlyCamera.js';
 
 // Act-two stage: standing on the world act one showed from orbit.
@@ -115,10 +116,15 @@ export class SurfaceScene {
   /**
    * `cinematic: true` skips the FlyCamera — the caller drives the camera by
    * assigning `this.cameraDriver = (camera, dt) => …` (the teaser does this).
+   *
+   * `castSeed` stages the wildlife as Episode 2's principal cast instead of
+   * the free-roam roster: zone-built genomes at staged climate sites, indexed
+   * on `this.fauna.cast` / `this.fauna.sites` (see fauna/cast.js).
    */
-  constructor(world, { patchSize = 3000, resolution = 320, cinematic = false } = {}) {
+  constructor(world, { patchSize = 3000, resolution = 320, cinematic = false, castSeed = null } = {}) {
     this.world = world;
     this.cinematic = cinematic;
+    this.castSeed = castSeed;
     this.cameraDriver = null;
     this.scene = new THREE.Scene();
     this.bloom = { strength: 0.18, radius: 0.5, threshold: 0.85 };
@@ -237,9 +243,13 @@ export class SurfaceScene {
     this.treeCount = this.flora.populate();
     this.scene.add(this.flora.group);
 
-    // Wildlife — every species this world rolled, hatched onto the patch.
+    // Wildlife — either the free-roam roster, or (with a castSeed) Episode 2's
+    // principal cast staged at real climate sites on this terrain.
     this.fauna = new Fauna(world, this.surface);
-    this.faunaCount = this.fauna.populate();
+    const cast = this.castSeed != null
+      ? { ...castGenomes(world, this.castSeed), sites: findCastSites(this.surface) }
+      : null;
+    this.faunaCount = this.fauna.populate(cast);
     this.scene.add(this.fauna.group);
 
     // Camera rig. Start at eye height on the site, looking at the horizon.

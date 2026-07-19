@@ -7,15 +7,15 @@ import { OrbitScene } from '../../scenes/OrbitScene.js';
 import { SurfaceScene } from '../../scenes/SurfaceScene.js';
 import { SystemScene } from '../SystemScene.js';
 import { SoupScene } from '../SoupScene.js';
-import { buildEpisode2Script, buildEpisode2Gate, principalCast } from './narration.js';
+import { buildEpisode2Script, buildEpisode2Gate } from './narration.js';
 
 // Episode 2 player. Same machinery as the Episode 1 site (Stage, Narrator,
 // Timeline) with a director that maps each cue's scene onto one of four stages
-// and drives its camera. This is the wiring milestone: the full episode plays
-// end to end — descent, the soup, the deep-time eras and the living-world tour —
-// narrated cue by cue. The era dial, the multi-biome terrain and the staged
-// interactions are the next milestones; here those cues play over the real
-// surface with cinematic camera, and every spoken FACT is already derived.
+// and drives its camera. The surface stage spawns the narration's principal
+// cast (fauna/cast.js) — zone-built bodies at staged climate sites — so a
+// species cue films the exact population the words describe, a site cue flies
+// to the real place that population lives, and the Act 4 chain (startle,
+// stampede, rush, rise, settle) fires on those same animals.
 
 const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
@@ -50,7 +50,7 @@ let surfaceReady = null;
 if (living) {
   stage.register('orbit', new OrbitScene(world, { interactive: false }));
   stage.register('soup', new SoupScene(world));
-  const surface = new SurfaceScene(world, { cinematic: true });
+  const surface = new SurfaceScene(world, { cinematic: true, castSeed: cosmos.seed });
   stage.register('surface', surface);
   // Warm the surface now — meshing terrain and growing trees takes seconds, and
   // the opening minutes are in orbit and the soup, so the cut to ground is a cut.
@@ -164,14 +164,22 @@ function driveSurface(scene, dir, index) {
   if (pop) {
     const centre = new THREE.Vector3();
     const air = pop.genome.domain === 'air';
+    // A solitary animal is filmed as ONE animal — its bandmates are scattered
+    // across its zone by design, and the centroid of scattered animals is
+    // empty ground the camera would frame instead of a body.
+    const solitary = pop.genome.role === 'solitary';
     const size = pop.genome.size ?? 2;
     const dist = air ? 46 : Math.max(13, size * 8);
     const dirSign = index % 2 ? 1 : -1;
     scene.cameraDriver = (camera, dt) => {
       t += dt;
-      centre.set(0, 0, 0);
-      for (const a of pop.agents) centre.add(a.pos);
-      centre.divideScalar(Math.max(1, pop.agents.length));
+      if (solitary && pop.agents.length) {
+        centre.copy(pop.agents[0].pos);
+      } else {
+        centre.set(0, 0, 0);
+        for (const a of pop.agents) centre.add(a.pos);
+        centre.divideScalar(Math.max(1, pop.agents.length));
+      }
       const az = index * 1.7 + dirSign * t * 0.07;
       const x = centre.x + Math.sin(az) * dist;
       const z = centre.z + Math.cos(az) * dist;
@@ -186,8 +194,24 @@ function driveSurface(scene, dir, index) {
   }
 
   // Everything else — ecosystem beats, the deep-time eras, the closing vista —
-  // is an establishing shot: wide, above the canopy, drifting around the site,
-  // varied per cue so the tour never repeats a framing.
+  // is an establishing shot: wide, above the canopy, drifting around the shot's
+  // own place, varied per cue so the tour never repeats a framing. A cue that
+  // names a staged zone (scrub, highland, interior — or the ridge between the
+  // coast and the high ground) orbits THAT site, so the tour actually crosses
+  // the patch instead of re-framing the landing clearing.
+  const sites = scene.fauna?.sites;
+  const at = (() => {
+    if (!sites) return clearing;
+    if (dir.site === 'ridge') {
+      return {
+        x: (sites.coast.x + sites.highland.x) / 2,
+        z: (sites.coast.z + sites.highland.z) / 2,
+      };
+    }
+    // The coast plays on the landing clearing — same shore, guaranteed open.
+    if (dir.site === 'coast') return clearing;
+    return sites[dir.site] ?? clearing;
+  })();
   const wide = dir.focus === 'world' || dir.site === 'vista';
   const seed = index * 1.3;
   // True aerials. From inside the tree-height zone every establishing shot is
@@ -197,7 +221,7 @@ function driveSurface(scene, dir, index) {
   const dist = (wide ? 260 : 170) + (index % 3) * 40;
   const elev = (wide ? 110 : 70) + (index % 4) * 15;
   const dirSign = index % 2 ? 1 : -1;
-  const cx = clearing.x, cz = clearing.z;
+  const cx = at.x, cz = at.z;
   // Scout the shot before flying it: on rolling forested terrain ANY fixed
   // orbit sometimes parks a hillside crown on the sightline, and one crown at
   // 60 m fills half the lens. March the camera→site ray at two dozen azimuths
@@ -289,15 +313,15 @@ function fireEvent(scene, dir) {
 }
 
 /**
- * Resolve a cue's `focus: 'speciesX'` to the live population it names — the
- * SAME role-based pick the script's cast used, so words and pictures agree.
+ * Resolve a cue's `focus: 'speciesX'` to the live population it names. The
+ * surface stage spawned the cast itself (Fauna.populate with fauna/cast.js),
+ * so this is a direct index — principal E is the cold-built highland
+ * population, not the coastal herd that shares its species name.
  */
 function filmTarget(scene, focus) {
-  if (!focus || !/^species[A-F]$/.test(focus)) return null;
-  const cast = (scene._ep2Cast ??= principalCast(scene.world.fauna ?? []));
-  const spec = cast[focus.slice(-1)];
-  if (!spec) return null;
-  return (scene.fauna?.populations ?? []).find((p) => p.genome.species === spec.species) ?? null;
+  const m = /^species([A-F])$/.exec(focus ?? '');
+  if (!m) return null;
+  return scene.fauna?.cast?.[m[1]] ?? null;
 }
 
 // --- The director ---------------------------------------------------------

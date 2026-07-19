@@ -1,5 +1,5 @@
 import { makeRng, hashSeed } from '../../core/rng.js';
-import { makeGenome } from '../../fauna/genome.js';
+import { castGenomes, baseTempC, ZONE_TEMP_OFFSET } from '../../fauna/cast.js';
 
 // Episode 2's script — "The Living World" — generated from one real world.
 //
@@ -14,10 +14,10 @@ import { makeGenome } from '../../fauna/genome.js';
 //   'soup'    SoupScene — the origin of life (Act 2)
 //   'system'  SystemScene — the no-life gate only
 //
-// The principals A–F are derived here, on the world, through a lightweight
-// "zone view" that overrides only the climate the genome reads — so a body the
-// narrator calls cold really was built cold. Full multi-biome terrain comes
-// later; the creature FACTS are already honest.
+// The principals A–F come from fauna/cast.js — the same module the surface
+// stage spawns them from. The genomes quoted here ARE the rendered bodies, at
+// the staged sites the camera flies to. One derivation; words and pictures
+// cannot disagree.
 
 const list = (names) => {
   const a = names.filter(Boolean);
@@ -26,38 +26,6 @@ const list = (names) => {
 };
 const m1 = (x) => `${x.toFixed(1)} metres`;
 const cm = (x) => `${Math.round(x * 100)} centimetres`;
-
-/** A view of the world with only the three fields makeGenome reads swapped. */
-function zoneView(world, tempC) {
-  return {
-    gravity: world.gravity,
-    atmosphere: world.atmosphere,
-    biome: { ...world.biome, temperatureC: tempC },
-    surface: {
-      ...world.surface,
-      detail: { ...world.surface.detail },
-      ground: world.surface.ground,
-    },
-  };
-}
-
-/**
- * The A–F principal cast, selected from the world's fauna by role. Exported so
- * the director can point the camera at the exact populations the script
- * narrates — the words and the pictures must pick the same animals.
- */
-export function principalCast(fa) {
-  const anyGround = fa.find((f) => f.domain === 'ground') ?? fa[0];
-  const herd0 = fa.find((f) => f.role === 'herd' && f.domain === 'ground') ?? anyGround;
-  return {
-    A: fa.find((f) => f.domain === 'air') ?? fa[0],
-    B: herd0,
-    C: fa.find((f) => f.role === 'solitary') ?? anyGround,
-    D: fa.find((f) => f.role === 'swarm') ?? anyGround,
-    E: herd0,
-    F: fa.find((f) => (f.legs && f.legs !== 4) || (f.neck && f.neck >= 1.2) || f.armored) ?? herd0,
-  };
-}
 
 /** Coat clause for a cold-built principal (Allen's rule made audible). */
 function coatClause(genome) {
@@ -73,7 +41,7 @@ export function buildEpisode2Script(cosmos, world) {
   // --- World facts, read off the sim ---------------------------------------
   const wname = world.full;
   const star = d.star.name;
-  const tempC = Math.round(world.temperatureC ?? world.biome.temperatureC ?? 15);
+  const tempC = baseTempC(world);
   const airNum = world.atmosphere.opacity * (0.5 + 0.5 * (world.atmosphere.thickness / 1.5));
   const air = airNum.toFixed(2);
   const airWord = airNum > 0.42 ? 'thick' : airNum > 0.3 ? 'dense' : airNum > 0.2 ? 'thin' : 'barely there';
@@ -84,17 +52,11 @@ export function buildEpisode2Script(cosmos, world) {
   const biomeLabel = world.biome.label;
   const groundColor = 'green';
 
-  // --- The principal cast, derived by role, each at its own climate --------
+  // --- The principal cast: the same specs and genomes the stage spawns -----
   const fa = world.fauna ?? [];
-  const specs = principalCast(fa);
-  const zoneTemp = { A: tempC, B: tempC, C: tempC + 22, D: tempC + 22, E: tempC - 38, F: tempC - 12 };
-  const gen = {};
-  for (const k of Object.keys(specs)) {
-    const spec = specs[k];
-    gen[k] = spec
-      ? makeGenome(zoneView(world, zoneTemp[k]), spec, makeRng(hashSeed('ep2:' + cosmos.seed + ':' + k)))
-      : null;
-  }
+  const { specs, gen } = castGenomes(world, cosmos.seed);
+  const scrubTemp = tempC + ZONE_TEMP_OFFSET.C;
+  const highTemp = tempC + ZONE_TEMP_OFFSET.E;
   const nm = (k) => specs[k]?.species ?? 'the animal';
   const flora = world.flora?.species?.[0]?.preset ?? 'the trees';
   const speciesCount = fa.length;
@@ -207,7 +169,7 @@ export function buildEpisode2Script(cosmos, world) {
     'And then something moves that is not the wind. Small, low, close to the ground — the first animals, feeding on the forest that fed on the light. Tentative. But it moves on its own account.',
     'Watch the undergrowth. There — and there. The first movers: little things, swarm-scale, no bigger than they have to be, testing a world that has never had to be tested. Life has learned to go and get its food instead of waiting for it.',
     'Up to now everything in this valley has stayed where it grew. No longer. The first fauna appear — small, wary, near the ground — and for the first time the valley contains something that can decide to be somewhere else.',
-  ), { scene: 'surface', direct: { era: 4, phase: 'firstmovers' }, hold: 6 });
+  ), { scene: 'surface', direct: { era: 4, phase: 'firstmovers', focus: 'speciesD' }, hold: 6 });
 
   say(pick(
     `Now the cast arrives in waves. Grazers, then the things that hunt them, then the things that clean up after both — ${speciesCount} species in all, until the valley is as crowded as it will ever be. And every one of them was folded out of that first stain. Nothing was added from outside.`,
@@ -253,9 +215,9 @@ export function buildEpisode2Script(cosmos, world) {
   ), { scene: 'surface', direct: { site: 'coast', event: 'spook-herd', focus: 'speciesB' }, hold: 5 });
 
   say(pick(
-    `The stampede is precisely what the stalker was built for. Meet ${nm('C')}, alone in the scrub — and read its body off the country it hunts. This ground is broken and hot, near ${tempC + 22} degrees, and both facts are written on the animal. Rough terrain wants long legs and a wide stance, so its stride is ${m1(gen.C?.legLen ?? 1.3)}; heat wants extremities that shed it, so the frame is drawn out long and lean. A cold-world hunter of the same stock would be squat. This one is stretched. The climate stretched it.`,
-    `${nm('C')} has been motionless this whole time, because a hunter’s whole economy is one accurate rush. The terrain is rough, so the legs are long — ${m1(gen.C?.legLen ?? 1.3)} — and the stance is wide, for footing on bad ground. The air runs to ${tempC + 22} degrees, so the body is long and thin, all radiator, throwing off the heat a sprint dumps into it. Every line of it is terrain and temperature, solved.`,
-    `Now the predator. ${nm('C')} waited in the scrub for exactly this panic, and its body is a map of where it waited. Broken ground gave it the ${m1(gen.C?.legLen ?? 1.3)} legs and the planted, wide-set stance. A hunting climate near ${tempC + 22} degrees gave it the long lean build, because heat that cannot be shed is death mid-chase. It is shaped to not overheat, and here that is the same as being shaped to kill.`,
+    `The stampede is precisely what the stalker was built for. Meet ${nm('C')}, alone in the scrub — and read its body off the country it hunts. This ground is broken and hot, near ${scrubTemp} degrees, and both facts are written on the animal. Rough terrain wants long legs and a wide stance, so its stride is ${m1(gen.C?.legLen ?? 1.3)}; heat wants extremities that shed it, so the frame is drawn out long and lean. A cold-world hunter of the same stock would be squat. This one is stretched. The climate stretched it.`,
+    `${nm('C')} has been motionless this whole time, because a hunter’s whole economy is one accurate rush. The terrain is rough, so the legs are long — ${m1(gen.C?.legLen ?? 1.3)} — and the stance is wide, for footing on bad ground. The air runs to ${scrubTemp} degrees, so the body is long and thin, all radiator, throwing off the heat a sprint dumps into it. Every line of it is terrain and temperature, solved.`,
+    `Now the predator. ${nm('C')} waited in the scrub for exactly this panic, and its body is a map of where it waited. Broken ground gave it the ${m1(gen.C?.legLen ?? 1.3)} legs and the planted, wide-set stance. A hunting climate near ${scrubTemp} degrees gave it the long lean build, because heat that cannot be shed is death mid-chase. It is shaped to not overheat, and here that is the same as being shaped to kill.`,
   ), { scene: 'surface', direct: { site: 'scrub', focus: 'speciesC' }, hold: 8 });
 
   say(pick(
@@ -283,9 +245,9 @@ export function buildEpisode2Script(cosmos, world) {
   ), { scene: 'surface', direct: { site: 'ridge', focus: 'ecosystem' }, hold: 8 });
 
   say(pick(
-    `Meet ${nm('E')}, of the high cold. And now temperature takes the chisel. It runs to ${tempC - 38} degrees up here, and cold has one commandment: lose less heat. So the body is pulled inward — round and compact, ${m1(gen.E?.bodyRad ?? 1)} through the torso where the coast’s animals are lean — and every extremity is cut short, ${m1(gen.E?.legLen ?? 1)} legs, a stubbed neck. ${coatClause(gen.E ?? {})} The planet left it no choice but to hoard warmth, and this is the shape of hoarding.`,
-    `${nm('E')} is the same kind of life we met on the shore, built under a colder number, and the difference is Allen’s rule made visible. Surface loses heat; volume keeps it; so a cold-world animal minimises the first and maximises the second. The result: a rounded ${m1(gen.E?.bodyRad ?? 1)} torso, short ${m1(gen.E?.legLen ?? 1)} legs, everything tucked in close, at ${tempC - 38} degrees. ${coatClause(gen.E ?? {})} Nothing here is for looks.`,
-    `Here is what the cold builds. At ${tempC - 38} degrees, a long lean body would bleed its warmth into the air and die of it, so ${nm('E')} is the exact opposite of the coastal hunter — compact, ${m1(gen.E?.bodyRad ?? 1)} at the barrel, legs cut down to ${m1(gen.E?.legLen ?? 1)}. ${coatClause(gen.E ?? {})} Same starting stock as the shore. A different thermometer. That thermometer is the whole reason it looks like this.`,
+    `Meet ${nm('E')}, of the high cold. And now temperature takes the chisel. It runs to ${highTemp} degrees up here, and cold has one commandment: lose less heat. So the body is pulled inward — round and compact, ${m1(gen.E?.bodyRad ?? 1)} through the torso where the coast’s animals are lean — and every extremity is cut short, ${m1(gen.E?.legLen ?? 1)} legs, a stubbed neck. ${coatClause(gen.E ?? {})} The planet left it no choice but to hoard warmth, and this is the shape of hoarding.`,
+    `${nm('E')} is the same kind of life we met on the shore, built under a colder number, and the difference is Allen’s rule made visible. Surface loses heat; volume keeps it; so a cold-world animal minimises the first and maximises the second. The result: a rounded ${m1(gen.E?.bodyRad ?? 1)} torso, short ${m1(gen.E?.legLen ?? 1)} legs, everything tucked in close, at ${highTemp} degrees. ${coatClause(gen.E ?? {})} Nothing here is for looks.`,
+    `Here is what the cold builds. At ${highTemp} degrees, a long lean body would bleed its warmth into the air and die of it, so ${nm('E')} is the exact opposite of the coastal hunter — compact, ${m1(gen.E?.bodyRad ?? 1)} at the barrel, legs cut down to ${m1(gen.E?.legLen ?? 1)}. ${coatClause(gen.E ?? {})} Same starting stock as the shore. A different thermometer. That thermometer is the whole reason it looks like this.`,
   ), { scene: 'surface', direct: { site: 'highland', focus: 'speciesE' }, hold: 8 });
 
   say(pick(

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { makeGenome } from './genome.js';
+import { ZONE_SITE } from './cast.js';
 import { SpeciesRig, headingQuat } from './rig.js';
 
 // Wildlife for a Surface patch — the manager and the two behaviour families.
@@ -72,7 +73,7 @@ class Population {
 // ---------------------------------------------------------------------------
 
 class Flock extends Population {
-  constructor(genome, rig, surface, rng) {
+  constructor(genome, rig, surface, rng, opts = {}) {
     const count = Math.min(genome.count, 120); // matrices are cheap; overdraw isn't
     super(genome, rig, count);
     this.surface = surface;
@@ -82,9 +83,15 @@ class Flock extends Population {
     this.alarmT = 1;
     this.alarmDir = new THREE.Vector3(1, 0, 0);
 
-    // The flock lives around an anchor near the landing site — the shot is at
-    // the origin, so that's where the sky should be alive.
-    this.anchor = new THREE.Vector3(rng.range(-250, 250), 0, rng.range(-250, 250));
+    // The flock lives around an anchor near its home ground — the landing site
+    // by default, or a staged zone site when the episode places the cast.
+    const origin = opts.origin ?? { x: 0, z: 0 };
+    const spread = opts.near ? 110 : 250;
+    this.anchor = new THREE.Vector3(
+      origin.x + rng.range(-spread, spread),
+      0,
+      origin.z + rng.range(-spread, spread),
+    );
     this.cruise = rng.range(35, 90); // metres above ground
     this.range = 420;
 
@@ -196,7 +203,7 @@ const BAND_TUNING = {
 };
 
 class GroundBand extends Population {
-  constructor(genome, rig, surface, rng) {
+  constructor(genome, rig, surface, rng, opts = {}) {
     const count = Math.min(genome.count, 60);
     super(genome, rig, count);
     this.surface = surface;
@@ -205,16 +212,22 @@ class GroundBand extends Population {
 
     // Find dry, walkable ground for the band's anchor — or per-agent anchors
     // for solitary animals, which want distance from each other, not company.
+    // Bands live around the landing site by default; a staged cast population
+    // gets a zone site as its origin and keeps close to it, so the camera cue
+    // that flies to the scrub finds the scrub's animals there.
+    const origin = opts.origin ?? { x: 0, z: 0 };
+    const bandR = opts.near ? [30, 160] : [80, 450];
+    const soloR = opts.near ? [60, 320] : [120, 800];
     const anchorFor = (minR, maxR) => {
       for (let tries = 0; tries < 60; tries++) {
         const t = rng.range(0, Math.PI * 2);
         const r = rng.range(minR, maxR);
-        const x = Math.sin(t) * r, z = Math.cos(t) * r;
+        const x = origin.x + Math.sin(t) * r, z = origin.z + Math.cos(t) * r;
         if (surface.heightAt(x, z) > this.seaLocal + 4) return new THREE.Vector3(x, 0, z);
       }
-      return new THREE.Vector3(0, 0, 0); // the landing site is dry by construction
+      return new THREE.Vector3(origin.x, 0, origin.z); // home ground is dry by construction
     };
-    this.anchor = genome.role === 'solitary' ? null : anchorFor(80, 450);
+    this.anchor = genome.role === 'solitary' ? null : anchorFor(bandR[0], bandR[1]);
 
     // Choreography state (see the episode-2 choreography doc): a panicking
     // band runs one way fast; a rushing hunter sprints at a live target; a
@@ -227,7 +240,7 @@ class GroundBand extends Population {
     this.lift = 0;
 
     for (let i = 0; i < count; i++) {
-      const home = this.anchor ?? anchorFor(120, 800);
+      const home = this.anchor ?? anchorFor(soloR[0], soloR[1]);
       const x = home.x + rng.range(-this.tune.spread, this.tune.spread);
       const z = home.z + rng.range(-this.tune.spread, this.tune.spread);
       this.agents.push({
@@ -398,10 +411,49 @@ export class Fauna {
     this.populations = [];
   }
 
-  /** Hatch every species the world rolled. Returns the number of animals. */
-  populate() {
+  /**
+   * Hatch the patch. Returns the number of animals.
+   *
+   * Without `cast`: every species the world rolled, anchored around the
+   * landing site — the free-roam behaviour.
+   *
+   * With `cast` ({ specs, gen, sites } — see fauna/cast.js): the populations
+   * ARE Episode 2's principal cast. Each principal spawns from its zone-built
+   * genome, anchored at its staged site, so the hot-stretched prowler stands
+   * in the scrub and the cold-rounded pale grazer stands on the highland —
+   * the exact bodies the narration describes, where it says they are. The
+   * spawned populations are indexed in `this.cast` (A–F) for the director.
+   */
+  populate(cast = null) {
     const rng = this.world.rng.fork('fauna');
     let total = 0;
+
+    if (cast) {
+      this.sites = cast.sites;
+      this.cast = {};
+      const spawned = new Map(); // two principals naming one population share it
+      for (const k of Object.keys(cast.specs)) {
+        const spec = cast.specs[k];
+        const genome = cast.gen[k];
+        if (!spec || !genome || spec.count < 1 || !genome.canFly) continue;
+        const siteKey = ZONE_SITE[k] ?? 'coast';
+        const dupKey = `${spec.species}@${siteKey}`;
+        if (spawned.has(dupKey)) { this.cast[k] = spawned.get(dupKey); continue; }
+        const srng = rng.fork('cast:' + k);
+        const rig = new SpeciesRig(genome, srng);
+        const Pop = genome.domain === 'air' ? Flock : GroundBand;
+        const site = cast.sites[siteKey] ?? cast.sites.coast;
+        const pop = new Pop(genome, rig, this.surface, srng, { origin: site, near: true });
+        pop.castKey = k;
+        pop.writePoses();
+        this.populations.push(pop);
+        this.group.add(pop.group);
+        this.cast[k] = pop;
+        spawned.set(dupKey, pop);
+        total += pop.agents.length;
+      }
+      return total;
+    }
 
     for (const spec of this.world.fauna) {
       if (spec.count < 1) continue;

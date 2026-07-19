@@ -70,9 +70,16 @@ export const BIOMES = {
       maxSlope: 0.62,        // cos of max slope angle a tree will grow on
       altitude: R(0.02, 0.34), // terrain-height band (orbital units) trees occupy
     },
+    // Every living world renders as temperate (planetChemistry.biomeFromChemistry),
+    // so this roster is the whole animal kingdom Episode 2 can film. It must
+    // cover every role the episode's principal cast needs — flock, herd,
+    // solitary, swarm, and one non-quadruped — or the cast falls back to
+    // filming the same herd under different names.
     fauna: [
       { species: 'skimmer', role: 'flock', count: R(40, 90), domain: 'air', sizeM: R(0.5, 0.9) },
       { species: 'grazer', role: 'herd', count: R(8, 20), domain: 'ground', sizeM: R(1.4, 2.2), legs: 4, neck: R(0.6, 1.2), tail: R(0.5, 0.9) },
+      { species: 'prowler', role: 'solitary', count: R(2, 4), domain: 'ground', sizeM: R(1.2, 1.8), legs: 4, neck: R(0.35, 0.55), tail: R(1.1, 1.6) },
+      { species: 'scurrier', role: 'swarm', count: R(26, 50), domain: 'ground', sizeM: R(0.22, 0.38), legs: 6, tail: R(0.3, 0.6) },
       { species: 'strider', role: 'herd', count: R(3, 7), domain: 'ground', sizeM: R(2.6, 3.6), legs: 2, neck: R(1.2, 1.8), tail: R(0.8, 1.2) },
     ],
   },
