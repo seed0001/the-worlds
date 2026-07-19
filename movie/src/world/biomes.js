@@ -62,9 +62,11 @@ export const BIOMES = {
         { preset: 'Aspen Small', weight: 2, scale: R(0.7, 1.1) },
         { preset: 'Bush 1', weight: 4, scale: R(0.6, 1.2) },
       ],
-      // Trees per 100 m^2. Sounds low; isn't. 0.15 over a 3 km patch is ~13k
+      // Trees per 100 m^2. Sounds low; isn't. 0.04 over a 3 km patch is ~3.5k
       // trees, and every doubling doubles both scatter time and leaf overdraw.
-      density: R(0.10, 0.22),
+      // (Was 0.10-0.22 — set when a NaN bug kept the forest from rendering at
+      // all; with real trees on screen that density can't hold frame rate.)
+      density: R(0.025, 0.055),
       maxSlope: 0.62,        // cos of max slope angle a tree will grow on
       altitude: R(0.02, 0.34), // terrain-height band (orbital units) trees occupy
     },
@@ -111,7 +113,7 @@ export const BIOMES = {
         { preset: 'Bush 3', weight: 4, scale: R(0.4, 0.8) },
         { preset: 'Pine Small', weight: 1, scale: R(0.5, 0.8) },
       ],
-      density: R(0.04, 0.12),
+      density: R(0.01, 0.03),
       maxSlope: 0.70,
       altitude: R(0.0, 0.5),
     },
@@ -157,7 +159,7 @@ export const BIOMES = {
         { preset: 'Pine Large', weight: 3, scale: R(0.7, 1.2) },
         { preset: 'Pine Medium', weight: 4, scale: R(0.6, 1.1) },
       ],
-      density: R(0.05, 0.20),
+      density: R(0.015, 0.05),
       maxSlope: 0.68,
       altitude: R(0.02, 0.22),
     },
