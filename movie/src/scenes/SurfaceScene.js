@@ -275,6 +275,20 @@ export class SurfaceScene {
     }
   }
 
+  /**
+   * Deep-time dial, 0..5 (the episode's eras: sterile, stained, greening,
+   * rooted, first movers, full roster). Drives the ground palette, how much of
+   * the forest stands, and which animals exist yet — so the same locked frame
+   * can play two hundred million years without contradicting the narrator.
+   */
+  setEra(era) {
+    if (!this.ready || era === this._era) return;
+    this._era = era;
+    this.surface.setLifeStage([0, 0.2, 0.55, 1, 1, 1][era] ?? 1);
+    this.flora?.setGrowth(era >= 4 ? 1 : era === 3 ? 0.6 : 0);
+    this.fauna?.setEra(era);
+  }
+
   /** One-line summary for the HUD. */
   stats() {
     return {

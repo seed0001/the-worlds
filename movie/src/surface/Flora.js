@@ -199,6 +199,7 @@ export class Flora {
 
     // 3. Bake each variant's instances into two InstancedMeshes.
     let total = 0;
+    this._instanced = [];
     for (const variant of pool) {
       const count = variant.instances.length;
       if (count === 0) continue;
@@ -211,6 +212,7 @@ export class Flora {
         const inst = new THREE.InstancedMesh(source.geometry, source.material, count);
         for (let i = 0; i < count; i++) inst.setMatrixAt(i, variant.instances[i]);
         inst.instanceMatrix.needsUpdate = true;
+        this._instanced.push({ mesh: inst, total: count });
         inst.castShadow = part === 'branches';
         inst.receiveShadow = true;
         // Instances are spread across the whole patch; the per-instance bounds
@@ -223,6 +225,17 @@ export class Flora {
     }
 
     return total;
+  }
+
+  /**
+   * Deep-time dial: fraction of the forest standing, 0..1. Instances were
+   * scattered in grid order, so a partial count reads as a thinner forest
+   * everywhere rather than a sharp edge.
+   */
+  setGrowth(f) {
+    for (const { mesh, total } of this._instanced ?? []) {
+      mesh.count = Math.max(0, Math.min(total, Math.round(total * f)));
+    }
   }
 
   dispose() {

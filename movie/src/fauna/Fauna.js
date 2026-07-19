@@ -327,7 +327,22 @@ export class Fauna {
   }
 
   update(dt) {
-    for (const pop of this.populations) pop.update(dt);
+    for (const pop of this.populations) {
+      if (pop.group.visible) pop.update(dt);
+    }
+  }
+
+  /**
+   * Deep-time dial. Before era 4 nothing moves; era 4 shows only the first
+   * movers (the swarm on the ground, the flock in the air, per the episode's
+   * choreography); era 5 is the full roster. Hidden populations also skip
+   * their behaviour update, which is a real perf win in the early acts.
+   */
+  setEra(era) {
+    for (const pop of this.populations) {
+      const firstMover = pop.genome.role === 'swarm' || pop.genome.domain === 'air';
+      pop.group.visible = era >= 5 || (era === 4 && firstMover);
+    }
   }
 
   /** Species roster for the HUD. */

@@ -7,7 +7,7 @@ import { OrbitScene } from '../../scenes/OrbitScene.js';
 import { SurfaceScene } from '../../scenes/SurfaceScene.js';
 import { SystemScene } from '../SystemScene.js';
 import { SoupScene } from '../SoupScene.js';
-import { buildEpisode2Script, buildEpisode2Gate } from './narration.js';
+import { buildEpisode2Script, buildEpisode2Gate, principalCast } from './narration.js';
 
 // Episode 2 player. Same machinery as the Episode 1 site (Stage, Narrator,
 // Timeline) with a director that maps each cue's scene onto one of four stages
@@ -157,23 +157,64 @@ function driveSurface(scene, dir, index) {
     };
     return;
   }
-  // Acts 3–5: a slow cinematic look around the living site, varied per cue so
-  // the tour never sits on one framing. Wide orbits stand off in the trees, so
-  // those ride above the canopy and look down into the clearing.
+  // Species cues: the script names an animal, so the camera films THAT animal
+  // — the same population the narrator's cast picked, tracked at its live
+  // centre exactly like the teaser's creature shots.
+  const pop = filmTarget(scene, dir.focus);
+  if (pop) {
+    const centre = new THREE.Vector3();
+    const air = pop.genome.domain === 'air';
+    const size = pop.genome.size ?? 2;
+    const dist = air ? 46 : Math.max(13, size * 8);
+    const dirSign = index % 2 ? 1 : -1;
+    scene.cameraDriver = (camera, dt) => {
+      t += dt;
+      centre.set(0, 0, 0);
+      for (const a of pop.agents) centre.add(a.pos);
+      centre.divideScalar(Math.max(1, pop.agents.length));
+      const az = index * 1.7 + dirSign * t * 0.07;
+      const x = centre.x + Math.sin(az) * dist;
+      const z = centre.z + Math.cos(az) * dist;
+      const ground = surfaceY(x, z);
+      // Fliers are filmed from below their cruise height; walkers from just
+      // above their own eye line.
+      const y = air ? Math.max(centre.y - 10, ground + 5) : ground + 1.6 + size * 0.9;
+      camera.position.set(x, y, z);
+      camera.lookAt(centre.x, centre.y + (air ? 0 : size * 0.4), centre.z);
+    };
+    return;
+  }
+
+  // Everything else — ecosystem beats, the deep-time eras, the closing vista —
+  // is an establishing shot: wide, above the canopy, drifting around the site,
+  // varied per cue so the tour never repeats a framing.
+  const wide = dir.focus === 'world' || dir.site === 'vista';
   const seed = index * 1.3;
-  const dist = 26 + (index % 4) * 10;
-  const elev = 4 + (index % 3) * 4;
+  const dist = (wide ? 130 : 60) + (index % 3) * 30;
+  const elev = (wide ? 55 : 24) + (index % 4) * 10;
   const dirSign = index % 2 ? 1 : -1;
   scene.cameraDriver = (camera, dt) => {
     t += dt;
-    const az = seed + dirSign * t * 0.06;
-    const cx = clearing.x + Math.sin(seed) * 10, cz = clearing.z + Math.cos(seed) * 10;
+    const az = seed + dirSign * t * 0.05;
+    const cx = clearing.x, cz = clearing.z;
     const x = cx + Math.sin(az) * dist, z = cz + Math.cos(az) * dist;
-    const y = Math.max(surfaceY(x, z) + elev, canopyTop(x, z, 18) + 5);
+    const y = Math.max(surfaceY(x, z) + elev, canopyTop(x, z, 18) + 6);
     camera.position.set(x, y, z);
-    // Look slightly up toward the horizon, never straight down into dark ground.
-    camera.lookAt(cx, surfaceY(cx, cz) + 8, cz);
+    // Look across the site toward the horizon, never straight down.
+    camera.lookAt(cx - Math.sin(az) * dist * 0.5, surfaceY(cx, cz) + 10, cz - Math.cos(az) * dist * 0.5);
   };
+}
+
+/**
+ * Resolve a cue's `focus: 'speciesX'` to the live population it names — the
+ * SAME role-based pick the script's cast used, so words and pictures agree.
+ */
+function filmTarget(scene, focus) {
+  if (!focus || !/^species[A-F]$/.test(focus)) return null;
+  const cast = (scene._ep2Cast ??= principalCast(scene.world.fauna ?? []));
+  const spec = cast[focus.slice(-1)];
+  if (!spec) return null;
+  return (scene.fauna?.populations ?? []).find((p) => p.genome.species === spec.species) ?? null;
 }
 
 // --- The director ---------------------------------------------------------
@@ -191,7 +232,12 @@ const director = async (cue) => {
   const dir = cue.direct ?? {};
   if (s instanceof SoupScene && dir.phase) s.setPhase(dir.phase);
   else if (s instanceof OrbitScene) driveOrbit(s, dir);
-  else if (s instanceof SurfaceScene) driveSurface(s, dir, cueIndex);
+  else if (s instanceof SurfaceScene) {
+    // Deep time: cues carry their era; anything without one (Acts 4–5) plays
+    // on the finished world. The descent and shallows land before life exists.
+    s.setEra(dir.era ?? 5);
+    driveSurface(s, dir, cueIndex);
+  }
   else if (s instanceof SystemScene) {
     s.setPhase?.('reveal');
     if (typeof dir.focus === 'number' && dir.focus >= 0) s.focus?.(dir.focus);
