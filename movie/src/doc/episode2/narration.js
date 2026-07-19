@@ -1,5 +1,5 @@
 import { makeRng, hashSeed } from '../../core/rng.js';
-import { castGenomes, baseTempC, ZONE_TEMP_OFFSET } from '../../fauna/cast.js';
+import { castGenomes, baseTempC } from '../../fauna/cast.js';
 
 // Episode 2's script — "The Living World" — generated from one real world.
 //
@@ -55,8 +55,6 @@ export function buildEpisode2Script(cosmos, world) {
   // --- The principal cast: the same specs and genomes the stage spawns -----
   const fa = world.fauna ?? [];
   const { specs, gen } = castGenomes(world, cosmos.seed);
-  const scrubTemp = tempC + ZONE_TEMP_OFFSET.C;
-  const highTemp = tempC + ZONE_TEMP_OFFSET.E;
   const nm = (k) => specs[k]?.species ?? 'the animal';
   const flora = world.flora?.species?.[0]?.preset ?? 'the trees';
   const speciesCount = fa.length;
@@ -215,9 +213,9 @@ export function buildEpisode2Script(cosmos, world) {
   ), { scene: 'surface', direct: { site: 'coast', event: 'spook-herd', focus: 'speciesB' }, hold: 5 });
 
   say(pick(
-    `The stampede is precisely what the stalker was built for. Meet ${nm('C')}, alone in the scrub — and read its body off the country it hunts. This ground is broken and hot, near ${scrubTemp} degrees, and both facts are written on the animal. Rough terrain wants long legs and a wide stance, so its stride is ${m1(gen.C?.legLen ?? 1.3)}; heat wants extremities that shed it, so the frame is drawn out long and lean. A cold-world hunter of the same stock would be squat. This one is stretched. The climate stretched it.`,
-    `${nm('C')} has been motionless this whole time, because a hunter’s whole economy is one accurate rush. The terrain is rough, so the legs are long — ${m1(gen.C?.legLen ?? 1.3)} — and the stance is wide, for footing on bad ground. The air runs to ${scrubTemp} degrees, so the body is long and thin, all radiator, throwing off the heat a sprint dumps into it. Every line of it is terrain and temperature, solved.`,
-    `Now the predator. ${nm('C')} waited in the scrub for exactly this panic, and its body is a map of where it waited. Broken ground gave it the ${m1(gen.C?.legLen ?? 1.3)} legs and the planted, wide-set stance. A hunting climate near ${scrubTemp} degrees gave it the long lean build, because heat that cannot be shed is death mid-chase. It is shaped to not overheat, and here that is the same as being shaped to kill.`,
+    `The stampede is precisely what the stalker was built for. Meet ${nm('C')}, alone in the scrub — and read its body off the country it hunts. This is broken ground, and the hottest hunting country this world owns, and both facts are written on the animal. Rough terrain wants long legs and a wide stance, so its stride is ${m1(gen.C?.legLen ?? 1.3)}; heat wants extremities that shed it, so the frame is drawn out long and lean. A cold-country hunter of the same stock would be squat. This one is stretched. The climate stretched it.`,
+    `${nm('C')} has been motionless this whole time, because a hunter’s whole economy is one accurate rush. The terrain is rough, so the legs are long — ${m1(gen.C?.legLen ?? 1.3)} — and the stance is wide, for footing on bad ground. This is the hot end of the world's weather, so the body is long and thin, all radiator, throwing off the heat a sprint dumps into it. Every line of it is terrain and temperature, solved.`,
+    `Now the predator. ${nm('C')} waited in the scrub for exactly this panic, and its body is a map of where it waited. Broken ground gave it the ${m1(gen.C?.legLen ?? 1.3)} legs and the planted, wide-set stance. Hunting through the hottest hours this country has gave it the long lean build, because heat that cannot be shed is death mid-chase. It is shaped to not overheat, and here that is the same as being shaped to kill.`,
   ), { scene: 'surface', direct: { site: 'scrub', focus: 'speciesC' }, hold: 8 });
 
   say(pick(
@@ -245,9 +243,9 @@ export function buildEpisode2Script(cosmos, world) {
   ), { scene: 'surface', direct: { site: 'ridge', focus: 'ecosystem' }, hold: 8 });
 
   say(pick(
-    `Meet ${nm('E')}, of the high cold. And now temperature takes the chisel. It runs to ${highTemp} degrees up here, and cold has one commandment: lose less heat. So the body is pulled inward — round and compact, ${m1(gen.E?.bodyRad ?? 1)} through the torso where the coast’s animals are lean — and every extremity is cut short, ${m1(gen.E?.legLen ?? 1)} legs, a stubbed neck. ${coatClause(gen.E ?? {})} The planet left it no choice but to hoard warmth, and this is the shape of hoarding.`,
-    `${nm('E')} is the same kind of life we met on the shore, built under a colder number, and the difference is Allen’s rule made visible. Surface loses heat; volume keeps it; so a cold-world animal minimises the first and maximises the second. The result: a rounded ${m1(gen.E?.bodyRad ?? 1)} torso, short ${m1(gen.E?.legLen ?? 1)} legs, everything tucked in close, at ${highTemp} degrees. ${coatClause(gen.E ?? {})} Nothing here is for looks.`,
-    `Here is what the cold builds. At ${highTemp} degrees, a long lean body would bleed its warmth into the air and die of it, so ${nm('E')} is the exact opposite of the coastal hunter — compact, ${m1(gen.E?.bodyRad ?? 1)} at the barrel, legs cut down to ${m1(gen.E?.legLen ?? 1)}. ${coatClause(gen.E ?? {})} Same starting stock as the shore. A different thermometer. That thermometer is the whole reason it looks like this.`,
+    `Meet ${nm('E')}, of the high cold. And now temperature takes the chisel. Winter owns this ground for most of the year, and cold has one commandment: lose less heat. So the body is pulled inward — round and compact, ${m1(gen.E?.bodyRad ?? 1)} through the torso where the coast’s animals are lean — and every extremity is cut short, ${m1(gen.E?.legLen ?? 1)} legs, a stubbed neck. ${coatClause(gen.E ?? {})} The planet left it no choice but to hoard warmth, and this is the shape of hoarding.`,
+    `${nm('E')} is the same kind of life we met on the shore, built under a colder sky, and the difference is Allen’s rule made visible. Surface loses heat; volume keeps it; so a cold-country animal minimises the first and maximises the second. The result: a rounded ${m1(gen.E?.bodyRad ?? 1)} torso, short ${m1(gen.E?.legLen ?? 1)} legs, everything tucked in close against the high cold. ${coatClause(gen.E ?? {})} Nothing here is for looks.`,
+    `Here is what the cold builds. On this ground, on the coldest nights, a long lean body would bleed its warmth into the air and die of it, so ${nm('E')} is the exact opposite of the coastal hunter — compact, ${m1(gen.E?.bodyRad ?? 1)} at the barrel, legs cut down to ${m1(gen.E?.legLen ?? 1)}. ${coatClause(gen.E ?? {})} Same starting stock as the shore. A different thermometer. That thermometer is the whole reason it looks like this.`,
   ), { scene: 'surface', direct: { site: 'highland', focus: 'speciesE' }, hold: 8 });
 
   say(pick(
@@ -278,7 +276,7 @@ export function buildEpisode2Script(cosmos, world) {
     'And come to rest on one quiet thing. A herd bedding down in the last light; the flock drifting back to roost over the water. The web at equilibrium — not still, never still, but balanced. Tomorrow it runs again.',
     'Settle on a single calm corner of it: animals folding down into the dusk, the day’s chain wound all the way out. Nothing is happening, which on a living world is its own kind of event — the moment the balance holds.',
     'Let it end gently. Somewhere in the frame a herd lies down; somewhere a flock comes home. This is what all that violence is for — a world that keeps running, night after night, in balance with itself. Watch it breathe.',
-  ), { scene: 'surface', direct: { site: 'vista', event: 'settle', focus: 'ecosystem' }, hold: 6 });
+  ), { scene: 'surface', direct: { site: 'coast', event: 'settle', focus: 'speciesB' }, hold: 6 });
 
   // === ACT 5 — CLOSE =======================================================
   say(pick(

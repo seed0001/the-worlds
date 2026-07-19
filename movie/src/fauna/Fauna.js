@@ -161,9 +161,10 @@ class Flock extends Population {
     return null;
   }
 
-  /** The day winds down: drop the alarm and let the leash bring them home. */
+  /** The day winds down: the flock comes home and roosts on the water. */
   calm() {
     this.alarm = 0;
+    this.rest();
   }
 
   update(dt) {
@@ -340,6 +341,7 @@ class GroundBand extends Population {
     this.panic = duration;
     this.urgency = urgency;
     this.rushTarget = null;
+    this._wake();
     if (dir && dir.lengthSq() > 1e-6) this.panicHeading = Math.atan2(dir.x, dir.z);
   }
 
@@ -348,6 +350,15 @@ class GroundBand extends Population {
     this.rushTarget = targetFn;
     this.panic = duration;
     this.urgency = 2.8;
+    this._wake();
+  }
+
+  /** Fear cancels sleep: a bedded animal is up the moment anything panics. */
+  _wake() {
+    for (const a of this.agents) {
+      a.bedded = false;
+      a.bedT = undefined;
+    }
   }
 
   /** Thermal column: the swarm spirals up off the ground while this holds. */
@@ -403,16 +414,21 @@ class GroundBand extends Population {
     }
   }
 
-  /** The day winds down: stop, stand, graze. */
+  /**
+   * The day winds down: stop, stand, graze — and a herd goes further and beds
+   * down for the night, each animal folding onto the ground on its own stagger.
+   */
   calm() {
     this.panic = 0;
     this.rushTarget = null;
     this.liftHold = 0;
-    for (const a of this.agents) {
+    const bed = this.genome.role === 'herd';
+    this.agents.forEach((a, i) => {
       a.targetSpeed = 0;
       a.nodTarget = 0.8;
       a.timer = 6;
-    }
+      if (bed && !a.dead) a.bedT = 1 + (i % 7) * 0.9;
+    });
   }
 
   update(dt) {
@@ -433,6 +449,20 @@ class GroundBand extends Population {
       // A carcass only keeps its feet on the ground. No behaviour, no gait.
       if (a.dead) {
         a.pos.y = this.surface.heightAt(a.pos.x, a.pos.z) + G.bodyRad * 0.55;
+        continue;
+      }
+
+      // Bedding down for the night: the body lowers to the ground and stays,
+      // head settling to a light doze. Legs fold away into the grass.
+      if (a.bedT !== undefined && !a.bedded) {
+        a.bedT -= dt;
+        if (a.bedT <= 0) a.bedded = true;
+      }
+      if (a.bedded) {
+        a.speed = a.targetSpeed = 0;
+        a.stride = 0;
+        a.nod += (0.35 - a.nod) * Math.min(1, dt * 1.5);
+        a.pos.y = this.surface.heightAt(a.pos.x, a.pos.z) + G.bodyRad * 0.62;
         continue;
       }
 
@@ -517,14 +547,26 @@ class GroundBand extends Population {
       }
 
       // Riding the thermal: the column lifts each agent to its own height and
-      // swirls the band around its home point.
+      // swirls the band around its home point. Carried, not walking — once an
+      // animal is truly airborne its gait stops (legs hang), and the column
+      // pulls tight around its axis so it reads as a rising spiral, not a
+      // scatter of levitating bodies.
       if (this.lift > 1e-3) {
-        a.pos.y += this.lift * (16 + 12 * Math.abs(Math.sin(i * 2.399)));
+        const liftY = this.lift * (16 + 12 * Math.abs(Math.sin(i * 2.399)));
+        a.pos.y += liftY;
+        const rx = a.pos.x - a.home.x, rz = a.pos.z - a.home.z;
+        const rd = Math.hypot(rx, rz) || 1;
+        if (rd > 9) {
+          const pull = (rd - 9) * Math.min(1, dt * 1.6) * this.lift;
+          a.pos.x -= (rx / rd) * pull;
+          a.pos.z -= (rz / rd) * pull;
+        }
         const ang = Math.atan2(a.pos.x - a.home.x, a.pos.z - a.home.z);
         const want = ang + Math.PI * 0.55; // tangential, spiralling inward
         const d = want - a.heading;
         a.heading += Math.atan2(Math.sin(d), Math.cos(d)) * Math.min(1, dt * 2) * this.lift;
         a.targetSpeed = Math.max(a.targetSpeed, G.walkSpeed * 0.9 * this.lift);
+        if (liftY > 3) a.stride = 0;
       }
 
       const nrm = this.surface.normalAt(a.pos.x, a.pos.z, 1.5);

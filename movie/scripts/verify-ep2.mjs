@@ -87,6 +87,32 @@ const seen=await p.evaluate(async()=>{
         const f2=[...cam.position.toArray(),...cam.quaternion.toArray()];
         events.push('commit-static:'+(f1.every((v,j)=>Math.abs(v-f2[j])<1e-9)?'FIRED':'DID-NOT-FIRE'));
       }
+      // Risen animals are carried, not trotting: airborne with gait stopped.
+      if(ev==='swarm-rise'&&c.D?.genome.role==='swarm'){
+        for(let k=0;k<300;k++)surface.update(1/60);
+        const up=c.D.agents.filter(a=>a.pos.y-surface.surface.heightAt(a.pos.x,a.pos.z)>6);
+        const carried=up.length>c.D.agents.length*0.4&&up.every(a=>a.stride===0);
+        events.push('rise-carried:'+(carried?'FIRED':'DID-NOT-FIRE ('+up.length+' airborne)'));
+      }
+      // The close: herds bedded on the ground, the flock roosting on the water.
+      if(ev==='settle'){
+        for(let k=0;k<600;k++)surface.update(1/60);
+        const bedded=c.B?.agents.filter(a=>a.bedded&&!a.dead).length??0;
+        const living=c.B?.agents.filter(a=>!a.dead).length??1;
+        events.push('herd-bedded:'+(bedded>living*0.6?'FIRED':'DID-NOT-FIRE ('+bedded+'/'+living+')'));
+        events.push('flock-roost:'+((c.A?.resting||c.A?.restUnavailable)?'FIRED':'DID-NOT-FIRE'));
+      }
+    }
+    // The ridge crossing is one continuous move that ends up at the highland.
+    if(cue.direct?.site==='ridge'&&stage.active?.cameraDriver&&surface?.fauna?.sites){
+      const cam=stage.active.camera;
+      const hi=surface.fauna.sites.highland;
+      stage.active.cameraDriver(cam,1/60);
+      const start=cam.position.clone();
+      for(let k=0;k<960;k++)stage.active.cameraDriver(cam,1/60);
+      const moved=start.distanceTo(cam.position);
+      const d0=Math.hypot(start.x-hi.x,start.z-hi.z),d1=Math.hypot(cam.position.x-hi.x,cam.position.z-hi.z);
+      events.push('ridge-travel:'+(moved>200&&d1<d0*0.5?'FIRED':'DID-NOT-FIRE (moved '+moved.toFixed(0)+'m, '+d0.toFixed(0)+'->'+d1.toFixed(0)+'m)'));
     }
     await new Promise(r=>setTimeout(r,60));
   }

@@ -248,26 +248,48 @@ function driveSurface(scene, dir, index) {
     };
     return;
   }
+  // The thermal column is filmed from the ground, wide: base, land and sky in
+  // one frame, the aim tilting up as the spiral climbs. Filming it from
+  // underneath (the tracking camera's instinct) turns a rising swarm into
+  // levitating silhouettes on empty blue.
+  if (pop && dir.event === 'swarm-rise') {
+    const base = centreOf(pop, new THREE.Vector3());
+    const baseY = surfaceY(base.x, base.z);
+    const { bestAz, elevBoost } = scout(base.x, base.z, 74, 14, 1.9);
+    const ex = base.x + Math.sin(bestAz) * 74;
+    const ez = base.z + Math.cos(bestAz) * 74;
+    const ey = Math.max(surfaceY(ex, ez) + 14 + elevBoost, canopyTop(ex, ez, 30) + 8);
+    scene.cameraDriver = (camera, dt) => {
+      t += dt;
+      camera.position.set(ex, ey, ez);
+      camera.lookAt(base.x, baseY + 8 + Math.min(24, t * 2.2), base.z);
+    };
+    return;
+  }
   if (pop) {
     const centre = new THREE.Vector3();
     const air = pop.genome.domain === 'air';
     // A solitary animal is filmed as ONE animal — its bandmates are scattered
     // across its zone by design, and the centroid of scattered animals is
-    // empty ground the camera would frame instead of a body.
-    const solitary = pop.genome.role === 'solitary';
+    // empty ground the camera would frame instead of a body. The settle close
+    // does the same: rest on one animal folding down, shot from the sun side
+    // so the last light falls on it, drifting barely at all.
+    const settle = dir.event === 'settle';
+    const single = pop.genome.role === 'solitary' || settle;
     const size = pop.genome.size ?? 2;
     const dist = air ? 46 : Math.max(13, size * 8);
     const dirSign = index % 2 ? 1 : -1;
     scene.cameraDriver = (camera, dt) => {
       t += dt;
-      if (solitary && pop.agents.length) {
-        centre.copy(pop.agents[0].pos);
+      if (single && pop.agents.length) {
+        centre.copy((pop.agents.find((a) => !a.dead) ?? pop.agents[0]).pos);
       } else {
         centre.set(0, 0, 0);
         for (const a of pop.agents) centre.add(a.pos);
         centre.divideScalar(Math.max(1, pop.agents.length));
       }
-      const az = index * 1.7 + dirSign * t * 0.07;
+      const az = (settle ? Math.atan2(sun.x, sun.z) : index * 1.7)
+        + dirSign * t * (settle ? 0.015 : 0.07);
       const x = centre.x + Math.sin(az) * dist;
       const z = centre.z + Math.cos(az) * dist;
       const ground = surfaceY(x, z);
@@ -280,21 +302,62 @@ function driveSurface(scene, dir, index) {
     return;
   }
 
+  // The ridge cue is the episode's one true traveling shot: no cut. The camera
+  // starts exactly where the column shot left it, lifts over the high ground on
+  // a single arc, and arrives overlooking the highland where the next cue's
+  // animal lives. "The camera goes with it" — so it goes.
+  if (dir.site === 'ridge') {
+    const hi = scene.fauna?.sites?.highland ?? clearing;
+    const T = 16;
+    let started = false;
+    const p0 = new THREE.Vector3(), p1 = new THREE.Vector3(), p2 = new THREE.Vector3();
+    const bez = (k, out) => {
+      const a1 = 1 - k;
+      return out.set(
+        a1 * a1 * p0.x + 2 * a1 * k * p1.x + k * k * p2.x,
+        a1 * a1 * p0.y + 2 * a1 * k * p1.y + k * k * p2.y,
+        a1 * a1 * p0.z + 2 * a1 * k * p1.z + k * k * p2.z,
+      );
+    };
+    const pos = new THREE.Vector3(), ahead = new THREE.Vector3();
+    scene.cameraDriver = (camera, dt) => {
+      if (!started) {
+        started = true;
+        p0.copy(camera.position);
+        const dx = hi.x - p0.x, dz = hi.z - p0.z, dd = Math.hypot(dx, dz) || 1;
+        // End: overlooking the highland from 150 m out.
+        p2.set(hi.x - (dx / dd) * 150, 0, hi.z - (dz / dd) * 150);
+        p2.y = Math.max(surfaceY(p2.x, p2.z), surfaceY(hi.x, hi.z)) + 55;
+        // Mid: clear over the highest ground on the way.
+        let hmax = -Infinity;
+        for (let f = 0; f <= 1; f += 0.05) {
+          hmax = Math.max(hmax, surfaceY(p0.x + (p2.x - p0.x) * f, p0.z + (p2.z - p0.z) * f));
+        }
+        p1.set((p0.x + p2.x) / 2, hmax + 60, (p0.z + p2.z) / 2);
+      }
+      t += dt;
+      const k = ss(0, T, t) * 0.97; // ease along the arc, hold just short of the end
+      bez(k, pos);
+      const floor = Math.max(surfaceY(pos.x, pos.z) + 14, canopyTop(pos.x, pos.z, 24) + 10);
+      if (pos.y < floor) pos.y = floor;
+      camera.position.copy(pos);
+      // Look down-path: 130 m ahead along the direction of travel, at the land.
+      bez(Math.min(1, k + 0.03), ahead).sub(pos).setY(0);
+      if (ahead.lengthSq() < 1) ahead.set(hi.x - pos.x, 0, hi.z - pos.z);
+      ahead.normalize().multiplyScalar(130).add(pos);
+      camera.lookAt(ahead.x, surfaceY(ahead.x, ahead.z) + 22, ahead.z);
+    };
+    return;
+  }
+
   // Everything else — ecosystem beats, the deep-time eras, the closing vista —
   // is an establishing shot: wide, above the canopy, drifting around the shot's
   // own place, varied per cue so the tour never repeats a framing. A cue that
-  // names a staged zone (scrub, highland, interior — or the ridge between the
-  // coast and the high ground) orbits THAT site, so the tour actually crosses
-  // the patch instead of re-framing the landing clearing.
+  // names a staged zone (scrub, highland, interior) orbits THAT site, so the
+  // tour actually crosses the patch instead of re-framing the landing clearing.
   const sites = scene.fauna?.sites;
   const at = (() => {
     if (!sites) return clearing;
-    if (dir.site === 'ridge') {
-      return {
-        x: (sites.coast.x + sites.highland.x) / 2,
-        z: (sites.coast.z + sites.highland.z) / 2,
-      };
-    }
     // The coast plays on the landing clearing — same shore, guaranteed open.
     if (dir.site === 'coast') return clearing;
     return sites[dir.site] ?? clearing;
@@ -376,8 +439,9 @@ function fireEvent(scene, dir) {
     case 'swarm-rise':
       // Only an actual swarm rides a thermal. On worlds whose roster has no
       // swarm the D slot falls back to a herd — big quadrupeds must not
-      // levitate, so they surge across the ground instead.
-      if (D?.genome.role === 'swarm') D.rise?.(11);
+      // levitate, so they surge across the ground instead. The column holds
+      // long enough for the ridge crossing to fly past it without a cut.
+      if (D?.genome.role === 'swarm') D.rise?.(26);
       else D?.stampede?.(toward(C ?? B, D, 1.9), 6, 1.4);
       break;
     case 'highland-link':
