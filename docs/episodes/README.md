@@ -18,3 +18,4 @@ inherits:
 
 - [Episode 1 — From Nothing to Worlds](episode-1.md) · **shipped**
 - [Episode 2 — The Living World](episode-2.md) · **design**
+- [Episode 3 — The Ones Who Ask](episode-3.md) · **design**
