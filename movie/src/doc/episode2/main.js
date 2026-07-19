@@ -75,44 +75,48 @@ function driveOrbit(scene, dir) {
 }
 
 function driveSurface(scene, dir, index) {
-  const ground = (x, z) => scene.surface.heightAt(x, z);
+  const sea = scene.seaLevelLocal ?? scene.surface.bounds?.seaLevelLocal ?? -Infinity;
+  // Ground you can stand on: real terrain, but never below the water surface —
+  // so a camera anchored to it never sinks under the ocean and goes black.
+  const surfaceY = (x, z) => Math.max(scene.surface.heightAt(x, z), sea);
   const sun = scene.sunDirection ?? new THREE.Vector3(0.35, 0.42, 0.84);
   let t = 0;
 
   if (dir.phase === 'descent') {
     // Glide down out of the sky to just above the landing site, looking toward
-    // the sun. Kept above the canopy until the last stretch.
+    // the sun so the horizon (not dark ground) fills the frame.
     scene.cameraDriver = (camera, dt) => {
       t += dt;
       const k = ss(0, 7, t);
-      const y = ground(0, 0) + 3 + (1 - k) * 220;
-      camera.position.set(0, y, (1 - k) * 40);
-      camera.lookAt(sun.x * 400, ground(0, 0) + 20 + (1 - k) * 60, sun.z * 400);
+      const base = surfaceY(0, (1 - k) * 40);
+      camera.position.set(0, base + 3 + (1 - k) * 220, (1 - k) * 40);
+      camera.lookAt(sun.x * 400, surfaceY(0, 0) + 30 + (1 - k) * 60, sun.z * 400);
     };
     return;
   }
   if (dir.phase === 'shallows') {
     scene.cameraDriver = (camera, dt) => {
       t += dt;
-      camera.position.set(Math.sin(t * 0.15) * 4, ground(0, 0) + 2.2, 6);
-      camera.lookAt(40, ground(0, 0) + 6, 40);
+      const x = Math.sin(t * 0.15) * 4;
+      camera.position.set(x, surfaceY(x, 6) + 2.5, 6);
+      camera.lookAt(sun.x * 200, surfaceY(0, 0) + 12, sun.z * 200);
     };
     return;
   }
   // Acts 3–5: a slow cinematic look around the living site, varied per cue so
-  // the tour never sits on one framing. (Real per-zone sites + the shot library
-  // land in later milestones; the facts spoken are already honest.)
+  // the tour never sits on one framing, and always kept above the waterline.
   const seed = index * 1.3;
   const dist = 26 + (index % 4) * 10;
-  const elev = 3 + (index % 3) * 4;
+  const elev = 4 + (index % 3) * 4;
   const dirSign = index % 2 ? 1 : -1;
   scene.cameraDriver = (camera, dt) => {
     t += dt;
     const az = seed + dirSign * t * 0.06;
     const cx = Math.sin(seed) * 30, cz = Math.cos(seed) * 30;
     const x = cx + Math.sin(az) * dist, z = cz + Math.cos(az) * dist;
-    camera.position.set(x, ground(x, z) + elev, z);
-    camera.lookAt(cx, ground(cx, cz) + 4, cz);
+    camera.position.set(x, surfaceY(x, z) + elev, z);
+    // Look slightly up toward the horizon, never straight down into dark ground.
+    camera.lookAt(cx, surfaceY(cx, cz) + 8, cz);
   };
 }
 
