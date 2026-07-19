@@ -289,6 +289,33 @@ export class SurfaceScene {
     this.fauna?.setEra(era);
   }
 
+  /**
+   * Lighting mood. 'dusk' drops the sun to the horizon and turns the light
+   * long and gold for the episode's closing act; 'day' is the built state.
+   */
+  setMood(mood) {
+    if (!this.ready || mood === this._mood) return;
+    this._mood = mood;
+    const s = this.world.surface;
+    const dusk = mood === 'dusk';
+    // Lower the sun itself — the sky shader's disc, the key light and the
+    // camera drivers all read this same vector, so everything agrees.
+    const dir = this.sunDirection;
+    dir.y = dusk ? 0.08 : 0.42;
+    dir.normalize();
+    this.sky.material.uniforms.sunDirection.value.copy(dir);
+    // Golden hour, not night: the light warms and lowers but the frame must
+    // still read — this episode has had enough black shots.
+    this.sun.intensity = s.sunIntensity * (dusk ? 0.8 : 1);
+    this.sun.color.set(dusk ? 0xffb060 : s.sunColor);
+    this.sky.material.uniforms.sunColor.value.set(dusk ? 0xffb060 : s.sunColor);
+    this.sky.material.uniforms.horizonColor.value
+      .set(s.horizon)
+      .lerp(new THREE.Color(0xffa060), dusk ? 0.5 : 0);
+    this.sky.material.uniforms.skyColor.value.set(s.sky).multiplyScalar(dusk ? 0.78 : 1);
+    this.fill.intensity = dusk ? 0.6 : 0.7;
+  }
+
   /** One-line summary for the HUD. */
   stats() {
     return {

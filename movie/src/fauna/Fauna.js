@@ -76,6 +76,11 @@ class Flock extends Population {
     const count = Math.min(genome.count, 120); // matrices are cheap; overdraw isn't
     super(genome, rig, count);
     this.surface = surface;
+    // Choreography state: an alarmed flock flies harder, higher, and with a
+    // shared direction until the alarm decays.
+    this.alarm = 0;
+    this.alarmT = 1;
+    this.alarmDir = new THREE.Vector3(1, 0, 0);
 
     // The flock lives around an anchor near the landing site — the shot is at
     // the origin, so that's where the sky should be alive.
@@ -102,12 +107,25 @@ class Flock extends Population {
     this.hideFrom(count);
   }
 
+  /** Escape burst: the whole flock leaves as one body, biased along `dir`. */
+  startle(dir, duration = 7) {
+    this.alarm = this.alarmT = duration;
+    if (dir && dir.lengthSq() > 1e-6) this.alarmDir.copy(dir).setY(0).normalize();
+  }
+
+  /** The day winds down: drop the alarm and let the leash bring them home. */
+  calm() {
+    this.alarm = 0;
+  }
+
   update(dt) {
     const G = this.genome;
     const agents = this.agents;
     const sepR = 4 * G.size, sepR2 = sepR * sepR;
     const neighR2 = 30 * 30;
-    const vmax = G.flySpeed, vmin = G.flySpeed * 0.35;
+    if (this.alarm > 0) this.alarm = Math.max(0, this.alarm - dt);
+    const urgency = this.alarm > 0 ? this.alarm / this.alarmT : 0;
+    const vmax = G.flySpeed * (1 + urgency * 0.9), vmin = G.flySpeed * 0.35;
 
     for (let i = 0; i < agents.length; i++) {
       const a = agents[i];
@@ -146,6 +164,13 @@ class Flock extends Population {
       }
       const groundY = this.surface.heightAt(a.pos.x, a.pos.z);
       _v2.y += (groundY + this.cruise - a.pos.y) * 0.4 - a.vel.y * 0.8;
+
+      // Alarm: one shared impulse — up off the water and away — that acts on
+      // every bird at once, which is exactly what an eruption looks like.
+      if (urgency > 0) {
+        _v2.addScaledVector(this.alarmDir, vmax * 2.2 * urgency);
+        _v2.y += vmax * 0.8 * urgency;
+      }
 
       a.vel.addScaledVector(_v2, dt);
       const speed = a.vel.length();
@@ -191,6 +216,16 @@ class GroundBand extends Population {
     };
     this.anchor = genome.role === 'solitary' ? null : anchorFor(80, 450);
 
+    // Choreography state (see the episode-2 choreography doc): a panicking
+    // band runs one way fast; a rushing hunter sprints at a live target; a
+    // rising swarm spirals up a thermal column.
+    this.panic = 0;
+    this.panicHeading = 0;
+    this.urgency = 2.2;
+    this.rushTarget = null;
+    this.liftHold = 0;
+    this.lift = 0;
+
     for (let i = 0; i < count; i++) {
       const home = this.anchor ?? anchorFor(120, 800);
       const x = home.x + rng.range(-this.tune.spread, this.tune.spread);
@@ -211,18 +246,68 @@ class GroundBand extends Population {
     this.hideFrom(count);
   }
 
+  /** Panic run: the whole band bolts along `dir`, fast, until it decays. */
+  stampede(dir, duration = 8, urgency = 2.2) {
+    this.panic = duration;
+    this.urgency = urgency;
+    this.rushTarget = null;
+    if (dir && dir.lengthSq() > 1e-6) this.panicHeading = Math.atan2(dir.x, dir.z);
+  }
+
+  /** Predator commit: sprint at whatever `targetFn` returns, one rush, all in. */
+  rush(targetFn, duration = 7) {
+    this.rushTarget = targetFn;
+    this.panic = duration;
+    this.urgency = 2.8;
+  }
+
+  /** Thermal column: the swarm spirals up off the ground while this holds. */
+  rise(duration = 10) {
+    this.liftHold = duration;
+  }
+
+  /** The day winds down: stop, stand, graze. */
+  calm() {
+    this.panic = 0;
+    this.rushTarget = null;
+    this.liftHold = 0;
+    for (const a of this.agents) {
+      a.targetSpeed = 0;
+      a.nodTarget = 0.8;
+      a.timer = 6;
+    }
+  }
+
   update(dt) {
     const G = this.genome;
     const T = this.tune;
     const agents = this.agents;
     const sepR = 2.4 * G.size, sepR2 = sepR * sepR;
 
+    if (this.panic > 0) this.panic = Math.max(0, this.panic - dt);
+    this.liftHold = Math.max(0, this.liftHold - dt);
+    this.lift += ((this.liftHold > 0 ? 1 : 0) - this.lift) * Math.min(1, dt * 0.5);
+    const panicking = this.panic > 0;
+    const target = panicking && this.rushTarget ? this.rushTarget() : null;
+
     for (let i = 0; i < agents.length; i++) {
       const a = agents[i];
 
+      if (panicking) {
+        // Panic overrides deliberation: one heading, top speed, heads up.
+        const want = target
+          ? Math.atan2(target.x - a.pos.x, target.z - a.pos.z)
+          : this.panicHeading + Math.sin(i * 3.1) * 0.35;
+        const d = want - a.heading;
+        a.heading += Math.atan2(Math.sin(d), Math.cos(d)) * Math.min(1, dt * 3);
+        a.targetSpeed = G.walkSpeed * this.urgency;
+        a.nodTarget = 0;
+        a.timer = Math.max(a.timer, 0.5); // no idle re-rolls mid-panic
+      }
+
       // State machine: every few seconds pick a new intent.
       a.timer -= dt;
-      if (a.timer <= 0) {
+      if (!panicking && a.timer <= 0) {
         if (a.rng.bool(T.grazeP)) {
           a.targetSpeed = 0;
           a.nodTarget = 0.8;
@@ -235,11 +320,12 @@ class GroundBand extends Population {
       }
       a.heading += a.rng.range(-1, 1) * T.turn * dt;
 
-      // Stay out of the water and on the leash.
+      // Stay out of the water and on the leash (panic outruns the leash —
+      // a stampede goes the only way panic ever goes: forward).
       const hx = a.home.x - a.pos.x, hz = a.home.z - a.pos.z;
       const hd = Math.hypot(hx, hz);
       const homeAngle = Math.atan2(hx, hz);
-      if (hd > T.leash) {
+      if (!panicking && hd > T.leash) {
         const drift = homeAngle - a.heading;
         a.heading += Math.atan2(Math.sin(drift), Math.cos(drift)) * Math.min(1, dt * 2);
       }
@@ -276,6 +362,17 @@ class GroundBand extends Population {
       // gravity allows. Slope tilt comes from the mesher's own normal.
       const y = this.surface.heightAt(a.pos.x, a.pos.z);
       a.pos.y = y + G.hipHeight + G.bounce * Math.abs(Math.sin(a.gaitPhase)) * a.stride;
+
+      // Riding the thermal: the column lifts each agent to its own height and
+      // swirls the band around its home point.
+      if (this.lift > 1e-3) {
+        a.pos.y += this.lift * (16 + 12 * Math.abs(Math.sin(i * 2.399)));
+        const ang = Math.atan2(a.pos.x - a.home.x, a.pos.z - a.home.z);
+        const want = ang + Math.PI * 0.55; // tangential, spiralling inward
+        const d = want - a.heading;
+        a.heading += Math.atan2(Math.sin(d), Math.cos(d)) * Math.min(1, dt * 2) * this.lift;
+        a.targetSpeed = Math.max(a.targetSpeed, G.walkSpeed * 0.9 * this.lift);
+      }
 
       const nrm = this.surface.normalAt(a.pos.x, a.pos.z, 1.5);
       _v2.set(nrm.x, nrm.y, nrm.z).lerp(_v.set(0, 1, 0), 0.55).normalize();
