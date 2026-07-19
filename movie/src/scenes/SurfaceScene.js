@@ -213,10 +213,19 @@ export class SurfaceScene {
 
     // Water — the three.js example ocean (webgl_shaders_ocean). It renders a
     // live reflection of the sky and terrain, so it reads as water at any angle
-    // instead of the black a plain PBR plane gives at grazing incidence. Only
-    // built when the patch actually dips below sea level.
+    // instead of the black a plain PBR plane gives at grazing incidence.
+    //
+    // The world's true sea can lie a hundred metres below a patch the site
+    // chooser still calls coastal — macro slopes are kilometres long, so the
+    // global waterline almost never crosses a 3 km patch. A shore story needs
+    // a shore: when the ocean is out of reach, water stands in the patch's own
+    // lowlands instead (a local water table), and the adjusted level is written
+    // back into bounds so the fauna, the staging sites and the mesh all agree
+    // on where the water's edge is.
     const { seaLevelLocal, minY } = this.surface.bounds;
-    if (seaLevelLocal >= minY) {
+    const waterLevel = seaLevelLocal >= minY ? seaLevelLocal : Math.min(minY + 10, -4);
+    this.surface.bounds.seaLevelLocal = waterLevel;
+    {
       const waterGeo = new THREE.PlaneGeometry(this.patchSize * 4, this.patchSize * 4);
       const water = new Water(waterGeo, {
         textureWidth: 512,
@@ -229,14 +238,12 @@ export class SurfaceScene {
         fog: this.scene.fog !== undefined,
       });
       water.rotation.x = -Math.PI / 2;
-      water.position.y = seaLevelLocal;
+      water.position.y = waterLevel;
       water.name = 'water';
       this.water = water;
       this.scene.add(water);
-    } else {
-      this.water = null;
     }
-    this.seaLevelLocal = seaLevelLocal;
+    this.seaLevelLocal = waterLevel;
 
     // Vegetation
     this.flora = new Flora(world, this.surface);

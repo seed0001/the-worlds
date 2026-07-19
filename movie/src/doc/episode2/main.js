@@ -212,6 +212,42 @@ function driveSurface(scene, dir, index) {
   // — the same population the narrator's cast picked, tracked at its live
   // centre exactly like the teaser's creature shots.
   const pop = filmTarget(scene, dir.focus);
+  // The commit is the one species shot that does NOT track its animal: the
+  // narrator says the chase resolves where we cannot follow, so the camera
+  // plants itself beside the launch point, holds still, and lets hunter and
+  // herd run through the frame and out of it.
+  if (pop && dir.event === 'predator-commit' && pop.agents.length) {
+    const start = pop.agents[0].pos.clone();
+    const herd = filmTarget(scene, 'speciesB');
+    const axis = herd
+      ? centreOf(herd, new THREE.Vector3()).sub(start).setY(0).normalize()
+      : new THREE.Vector3(1, 0, 0);
+    const side = new THREE.Vector3(-axis.z, 0, axis.x);
+    const aim = start.clone().addScaledVector(axis, 30);
+    aim.y = surfaceY(aim.x, aim.z) + 2;
+    // The scrub has trees; a blindly planted camera ends up inside one. Try a
+    // handful of side positions and keep the clearest sightline to the chase.
+    let eye = null, bestM = -Infinity;
+    for (const s of [42, -42, 62, -62]) {
+      for (const back of [10, 26]) {
+        const c = start.clone().addScaledVector(axis, back).addScaledVector(side, s);
+        c.y = surfaceY(c.x, c.z) + 7;
+        let m = Infinity;
+        for (let f = 0.1; f < 0.95; f += 0.1) {
+          const x = c.x + (aim.x - c.x) * f, z = c.z + (aim.z - c.z) * f;
+          const ray = c.y + (aim.y - c.y) * f;
+          m = Math.min(m, ray - Math.max(surfaceY(x, z) + 1.5, canopyTop(x, z, 14)));
+        }
+        if (m > bestM) { bestM = m; eye = c; }
+      }
+    }
+    eye.y += Math.max(0, 8 - bestM);
+    scene.cameraDriver = (camera) => {
+      camera.position.copy(eye);
+      camera.lookAt(aim);
+    };
+    return;
+  }
   if (pop) {
     const centre = new THREE.Vector3();
     const air = pop.genome.domain === 'air';
@@ -312,6 +348,11 @@ function fireEvent(scene, dir) {
     return d.lengthSq() > 1 ? d.normalize() : fb;
   };
   switch (dir.event) {
+    case 'flock-rest':
+      // Act 4 opens on the flock riding the shallows — on the water, so the
+      // startle two cues later has a surface to erupt from.
+      A?.rest?.();
+      break;
     case 'startle-flock':
       A?.startle?.(toward(A, B), 7);
       break;
@@ -323,6 +364,15 @@ function fireEvent(scene, dir) {
       if (C && C !== B) C.rush?.(() => centreOf(B ?? C, _ec), 7);
       B?.stampede?.(toward(C ?? A, B), 7, 2.6);
       break;
+    case 'kill': {
+      // The chase's end, made real: one grazer is down where the hunter caught
+      // it, the hunter stands over the kill, and the swarm boils up out of the
+      // soil around the body — the exact chain the narrator describes.
+      const carcass = C && B && C !== B ? B.down?.(centreOf(C, _ec)) : null;
+      if (carcass) D?.swarmTo?.(carcass.pos);
+      C?.calm?.();
+      break;
+    }
     case 'swarm-rise':
       // Only an actual swarm rides a thermal. On worlds whose roster has no
       // swarm the D slot falls back to a herd — big quadrupeds must not

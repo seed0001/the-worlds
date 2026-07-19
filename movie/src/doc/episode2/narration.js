@@ -175,7 +175,7 @@ export function buildEpisode2Script(cosmos, world) {
     `Now the shore fills. Grazers come down to the water; the flock thickens over the shallows — this valley gathering its own kinds, while over every horizon the same slow crowding happens in other shapes. ${speciesCount} species now share this world, and every one of them was folded out of that first stain. Nothing was added from outside.`,
     `Wave on wave, life claims the frame — herds on the ground, fliers over the water. And this shore is only keeping its share: across the planet the roster has filled to ${speciesCount} kinds of animal, each one a different answer worked out from the same starting chemistry. Rewind it and you would find no seam, no import, no outside hand — only era one, run longer.`,
     `The valley settles into its cast — the herds, the flock above them — and it looks complete. It is not even the whole story: ${speciesCount} species now live on this world, most of them beyond that ridge, in country we have not seen. It looks designed. It was not. It is what one pool of self-copying chemistry does, left alone with the light for long enough.`,
-  ), { scene: 'surface', direct: { era: 5, phase: 'fullroster' }, hold: 7 });
+  ), { scene: 'surface', direct: { era: 5, phase: 'fullroster', event: 'flock-rest' }, hold: 7 });
 
   say(pick(
     `And this is one valley. Pull back. The same deep time has been running everywhere at once — ${zonesCount} climates on this single world, ${zonesList}, each with its own life built to its own conditions. We have been watching one shore of a whole living planet.`,
@@ -221,16 +221,16 @@ export function buildEpisode2Script(cosmos, world) {
   ), { scene: 'surface', direct: { site: 'scrub', focus: 'speciesC' }, hold: 8 });
 
   say(pick(
-    `And it commits. One rush, everything spent at once — and then dust and broken ground take it, and we lose them both behind the ridge. We do not need to see it. We know how it ends.`,
-    `There is no second attempt in that body, so it does not hesitate. The stalker breaks cover and the chase folds into the dust of the herd’s own making. Let it resolve out of sight. This is a documentary about how the world works, not a thing to watch bleed.`,
-    `It goes — low, flat, all of it at once. The stampede and the hunter disappear into the same cloud of grit, and the story finishes where we cannot follow. When the dust settles, one animal will be down. Watch instead what that draws.`,
+    `And it commits. One rush, everything spent at once — and the chase tears out of the frame and into the broken country. We hold the shot. We do not need to see how it ends. We know.`,
+    `There is no second attempt in that body, so it does not hesitate. The stalker breaks cover, the chase pours through the frame and away, and we let it resolve where we cannot watch. This is a documentary about how the world works, not a thing to watch bleed.`,
+    `It goes — low, flat, all of it at once. Hunter and herd cross the frame together and are gone, and the story finishes out of sight. Somewhere out there, one animal is down. Watch instead what that draws.`,
   ), { scene: 'surface', direct: { site: 'scrub', event: 'predator-commit', focus: 'speciesC' }, hold: 5 });
 
   say(pick(
-    `The kill calls the swarm. ${nm('D')} rises out of the ground in its thousands — each one barely ${m1(gen.D?.size ?? 0.3)} across — because on a living world nothing edible is ever wasted, and the smallest mouths are always the most numerous. What the hunter could not finish, these will.`,
+    `The kill calls the swarm. ${nm('D')} rises out of the ground as one seething body — each animal barely ${m1(gen.D?.size ?? 0.3)} across — because on a living world nothing edible is ever wasted, and the smallest mouths are always the most numerous. What the hunter could not finish, these will.`,
     `And here is what the dust was hiding: ${nm('D')}, boiling up out of the soil the instant there is death to feed on. Singly they are nothing, ${m1(gen.D?.size ?? 0.3)} of body apiece. Together they will reduce the kill to bare ground. Life eating life eating light — and not a gram of it thrown away.`,
     `No carcass lasts long here. The scent of the kill pulls ${nm('D')} up in a living haze, none larger than ${m1(gen.D?.size ?? 0.3)}. This is the chain’s quiet arithmetic: the big animal fed the hunter, the hunter’s leavings feed the swarm, and the swarm is about to feed the wind.`,
-  ), { scene: 'surface', direct: { site: 'scrub', focus: 'speciesD' }, hold: 7 });
+  ), { scene: 'surface', direct: { site: 'scrub', focus: 'speciesD', event: 'kill' }, hold: 7 });
 
   say(pick(
     'Sated, the swarm lifts — and the warm ground gives it a road. A column of them rides the updraft upward, off the coast entirely, climbing toward the ridge. The camera goes with it.',

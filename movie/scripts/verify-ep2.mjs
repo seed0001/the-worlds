@@ -53,15 +53,40 @@ const seen=await p.evaluate(async()=>{
     const ev=cue.direct?.event;
     if(ev&&surface?.fauna?.cast){
       const c=surface.fauna.cast;
+      const centre=(P)=>{let x=0,z=0;for(const a of P.agents){x+=a.pos.x;z+=a.pos.z;}const n=Math.max(1,P.agents.length);return [x/n,z/n];};
       const fired=
-        ev==='startle-flock'? c.A?.alarm>0
+        ev==='flock-rest'? (c.A?.resting===true||c.A?.restUnavailable===true)
+        : ev==='startle-flock'? c.A?.alarm>0
         : ev==='spook-herd'? c.B?.panic>0
         : ev==='predator-commit'? c.C?.panic>0&&!!c.C?.rushTarget
+        : ev==='kill'? (()=>{const dead=c.B?.agents.find(a=>a.dead);if(!dead||!c.D)return false;const [dx,dz]=centre(c.D);return Math.hypot(dx-dead.pos.x,dz-dead.pos.z)<40;})()
         : ev==='swarm-rise'? c.D?.liftHold>0
         : ev==='highland-link'? c.E?.panic>0
         : ev==='settle'? !(c.B?.panic>0)&&!(c.A?.alarm>0)
         : null;
       events.push(ev+':'+(fired===null?'?':fired?'FIRED':'DID-NOT-FIRE'));
+      // After the rest call, run ~12 s of fixed-step sim and check the flock
+      // actually reached the surface — resting is a claim, altitude is a fact.
+      if(ev==='flock-rest'){
+        if(!c.A?.resting){events.push('flock-on-water:'+(c.A?.restUnavailable?'SKIPPED(no water on patch)':'DID-NOT-FIRE'));}
+        else{
+          let alt=Infinity;
+          for(let k=0;k<5400&&alt>=4;k++){
+            surface.update(1/60);
+            if(k%60===59)alt=c.A.agents.reduce((s,a)=>s+a.pos.y,0)/c.A.agents.length-(surface.seaLevelLocal??0);
+          }
+          events.push('flock-on-water:'+(alt<4?'FIRED':'DID-NOT-FIRE ('+alt.toFixed(1)+'m)'));
+        }
+      }
+      // The commit shot must hold still: two driver steps, identical camera.
+      if(ev==='predator-commit'&&stage.active?.cameraDriver){
+        const cam=stage.active.camera;
+        stage.active.cameraDriver(cam,1/60);
+        const f1=[...cam.position.toArray(),...cam.quaternion.toArray()];
+        stage.active.cameraDriver(cam,1/60);
+        const f2=[...cam.position.toArray(),...cam.quaternion.toArray()];
+        events.push('commit-static:'+(f1.every((v,j)=>Math.abs(v-f2[j])<1e-9)?'FIRED':'DID-NOT-FIRE'));
+      }
     }
     await new Promise(r=>setTimeout(r,60));
   }

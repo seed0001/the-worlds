@@ -20,6 +20,7 @@ import { SpeciesRig, headingQuat } from './rig.js';
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _m = new THREE.Matrix4();
+const _q = new THREE.Quaternion();
 
 class Population {
   constructor(genome, rig, count) {
@@ -78,10 +79,17 @@ class Flock extends Population {
     super(genome, rig, count);
     this.surface = surface;
     // Choreography state: an alarmed flock flies harder, higher, and with a
-    // shared direction until the alarm decays.
+    // shared direction until the alarm decays. A resting flock sits ON the
+    // water (rest()) until something startles it — which is what lets the
+    // startle cue genuinely erupt off the surface.
     this.alarm = 0;
     this.alarmT = 1;
     this.alarmDir = new THREE.Vector3(1, 0, 0);
+    this.seaLocal = surface.bounds.seaLevelLocal;
+    this.resting = false;
+    this.restUnavailable = false;
+    this.restPoint = null;
+    this.bobT = 0;
 
     // The flock lives around an anchor near its home ground — the landing site
     // by default, or a staged zone site when the episode places the cast.
@@ -116,8 +124,41 @@ class Flock extends Population {
 
   /** Escape burst: the whole flock leaves as one body, biased along `dir`. */
   startle(dir, duration = 7) {
+    this.resting = false;
     this.alarm = this.alarmT = duration;
     if (dir && dir.lengthSq() > 1e-6) this.alarmDir.copy(dir).setY(0).normalize();
+  }
+
+  /**
+   * Settle onto the water. Finds open water near the anchor once, then the
+   * update glides every bird down to its own float slot on the surface. On a
+   * patch with no reachable water the flock simply stays airborne — and says
+   * so via `restUnavailable`, so the verify harness knows it was not a lie.
+   */
+  rest() {
+    this.restPoint ??= this._findRestPoint();
+    if (this.restPoint) this.resting = true;
+    else this.restUnavailable = true;
+  }
+
+  _findRestPoint() {
+    // Nearest open water anywhere on the patch — the water can be a kilometre
+    // from the landing site even on a "shore" world, and a flock crosses that
+    // in under a minute. Prefer proper depth; settle for shallows.
+    const S = 1450, STEP = 50;
+    for (const margin of [3, 1.2]) {
+      let best = null, bd = Infinity;
+      for (let x = -S; x <= S; x += STEP) {
+        for (let z = -S; z <= S; z += STEP) {
+          if (this.surface.heightAt(x, z) < this.seaLocal - margin) {
+            const d = (x - this.anchor.x) ** 2 + (z - this.anchor.z) ** 2;
+            if (d < bd) { bd = d; best = { x, z }; }
+          }
+        }
+      }
+      if (best) return new THREE.Vector3(best.x, 0, best.z);
+    }
+    return null;
   }
 
   /** The day winds down: drop the alarm and let the leash bring them home. */
@@ -128,6 +169,41 @@ class Flock extends Population {
   update(dt) {
     const G = this.genome;
     const agents = this.agents;
+    this.bobT += dt;
+
+    // At rest the boids are OFF: each bird glides to its own slot on the
+    // water, parks there, and bobs. Wings hold instead of beating.
+    if (this.resting && this.alarm <= 0) {
+      for (let i = 0; i < agents.length; i++) {
+        const a = agents[i];
+        const ang = i * 2.399963;
+        const rad = (1.6 + Math.sqrt(i) * 1.5) * Math.max(G.size, 0.35);
+        const tx = this.restPoint.x + Math.sin(ang) * rad;
+        const tz = this.restPoint.z + Math.cos(ang) * rad;
+        const ty = this.seaLocal + G.size * 0.16;
+        _v.set(tx - a.pos.x, ty - a.pos.y, tz - a.pos.z);
+        const d = _v.length();
+        if (d > 1.2) {
+          const sp = Math.min(G.flySpeed * 1.5, 6 + d * 0.45);
+          a.vel.lerp(_v.normalize().multiplyScalar(sp), Math.min(1, dt * 2));
+          a.pos.addScaledVector(a.vel, dt);
+          // On a long approach, hold clearance over terrain and canopy; only
+          // drop to the surface once the water is underneath.
+          const horiz = Math.hypot(a.pos.x - this.restPoint.x, a.pos.z - this.restPoint.z);
+          const clear = this.surface.heightAt(a.pos.x, a.pos.z) + 6;
+          if (horiz > 60 && a.pos.y < clear) a.pos.y = clear;
+          a.flapPhase += dt * Math.PI * 2 * G.flapHz * 0.5;
+          if (a.vel.lengthSq() > 0.25) headingQuat(a.quat, a.vel);
+        } else {
+          a.vel.multiplyScalar(Math.max(0, 1 - dt * 4));
+          a.pos.x += (tx - a.pos.x) * Math.min(1, dt * 2);
+          a.pos.z += (tz - a.pos.z) * Math.min(1, dt * 2);
+          a.pos.y = ty + Math.sin(this.bobT * 1.3 + i * 1.7) * 0.07 * Math.max(G.size, 0.3);
+        }
+      }
+      this.writePoses();
+      return;
+    }
     const sepR = 4 * G.size, sepR2 = sepR * sepR;
     const neighR2 = 30 * 30;
     if (this.alarm > 0) this.alarm = Math.max(0, this.alarm - dt);
@@ -279,6 +355,54 @@ class GroundBand extends Population {
     this.liftHold = duration;
   }
 
+  /**
+   * The chase ends: the band member nearest `point` goes down and stays down.
+   * The body rolls onto its side, drops to the ground, and is skipped by every
+   * behaviour from then on — a carcass, not an actor. Returns the agent so the
+   * director can stage what the kill draws.
+   */
+  down(point) {
+    let best = null, bd = Infinity;
+    for (const a of this.agents) {
+      if (a.dead) continue;
+      const d = (a.pos.x - point.x) ** 2 + (a.pos.z - point.z) ** 2;
+      if (d < bd) { bd = d; best = a; }
+    }
+    if (!best) return null;
+    best.dead = true;
+    best.speed = best.targetSpeed = 0;
+    best.stride = 0;
+    best.nod = 0;
+    _q.setFromAxisAngle(_v.set(0, 0, 1), Math.PI * 0.46); // rolled onto its side
+    best.quat.multiply(_q);
+    return best;
+  }
+
+  /**
+   * Death summons: the swarm boils up out of the soil around the carcass —
+   * which is the narrated image, and also the only honest way a walker this
+   * small "arrives" from hundreds of metres away inside one cue. Each agent
+   * surfaces on its own stagger; homes move to the kill so the band stays on
+   * it, and a later rise() spirals up from this same spot.
+   */
+  swarmTo(point) {
+    this.panic = 0;
+    this.rushTarget = null;
+    this.liftHold = 0;
+    for (let i = 0; i < this.agents.length; i++) {
+      const a = this.agents[i];
+      const ang = i * 2.399963;
+      const rad = 1.2 + Math.sqrt(i) * 0.85;
+      a.pos.x = point.x + Math.sin(ang) * rad;
+      a.pos.z = point.z + Math.cos(ang) * rad;
+      a.home.set(point.x, 0, point.z);
+      a.heading = Math.atan2(point.x - a.pos.x, point.z - a.pos.z);
+      a.emerge = -((i % 9) * 0.14); // staggered eruption from below
+      a.speed = a.targetSpeed = 0;
+      a.timer = 0.5 + (i % 5) * 0.3;
+    }
+  }
+
   /** The day winds down: stop, stand, graze. */
   calm() {
     this.panic = 0;
@@ -305,6 +429,12 @@ class GroundBand extends Population {
 
     for (let i = 0; i < agents.length; i++) {
       const a = agents[i];
+
+      // A carcass only keeps its feet on the ground. No behaviour, no gait.
+      if (a.dead) {
+        a.pos.y = this.surface.heightAt(a.pos.x, a.pos.z) + G.bodyRad * 0.55;
+        continue;
+      }
 
       if (panicking) {
         // Panic overrides deliberation: one heading, top speed, heads up.
@@ -351,6 +481,7 @@ class GroundBand extends Population {
       // Personal space — position push, not a steering debate.
       for (let j = i + 1; j < agents.length; j++) {
         const b = agents[j];
+        if (b.dead) continue;
         const dx = a.pos.x - b.pos.x, dz = a.pos.z - b.pos.z;
         const d2 = dx * dx + dz * dz;
         if (d2 < sepR2 && d2 > 1e-6) {
@@ -375,6 +506,15 @@ class GroundBand extends Population {
       // gravity allows. Slope tilt comes from the mesher's own normal.
       const y = this.surface.heightAt(a.pos.x, a.pos.z);
       a.pos.y = y + G.hipHeight + G.bounce * Math.abs(Math.sin(a.gaitPhase)) * a.stride;
+
+      // Surfacing after swarmTo: rise out of the soil on a stagger, standing
+      // still until fully out of the ground.
+      if (a.emerge !== undefined && a.emerge < 1) {
+        a.emerge += dt * 0.9;
+        const k = Math.max(0, Math.min(1, a.emerge));
+        a.pos.y -= (1 - k) * (G.hipHeight + G.size * 1.2);
+        if (k < 1) a.targetSpeed = 0;
+      }
 
       // Riding the thermal: the column lifts each agent to its own height and
       // swirls the band around its home point.
