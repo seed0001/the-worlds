@@ -165,6 +165,12 @@ export class World {
       const h = this.heightAt(dir);
       if (h <= this.seaLevel + 0.01) continue;
 
+      // Macro height alone can lie: the surface adds ±30 m of detail relief on
+      // top of it, so a site that clears sea level by a few metres of macro can
+      // still come out underwater once the patch is actually meshed.
+      const seaMetres = this.seaLevel * this.heightScaleMetres;
+      if (this.heightMetresAt(dir) <= seaMetres + 8) continue;
+
       const n = this.normalAt(dir);
       const flatness = n.x * dir.x + n.y * dir.y + n.z * dir.z; // 1 = level
       if (flatness < 0.985) continue;
