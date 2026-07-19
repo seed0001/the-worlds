@@ -74,37 +74,92 @@ function driveOrbit(scene, dir) {
   };
 }
 
+// The landing patch is unbroken forest with no clearance around the site — the
+// same wall the teaser's descent hit (see doc/teaser.js): fly a camera into the
+// canopy and the frame fills with unlit leaves. Every "black water" shot in
+// this episode was that, not the ocean. So: stage the ground shots around a
+// real clearing, and when a framing has to stand off outside it, lift the
+// camera above the trees around it instead of shooting through them.
+function surfaceStaging(scene) {
+  if (scene._ep2Staging) return scene._ep2Staging;
+  const trees = scene.flora?.placements ?? [];
+  const isClear = (x, z, r) => !trees.some((p) => {
+    const dx = p.x - x, dz = p.z - z;
+    return dx * dx + dz * dz < r * r;
+  });
+  let clearing = { x: 0, z: 0 };
+  outer:
+  for (let r = 0; r <= 400; r += 25) {
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+      const x = Math.sin(a) * r, z = Math.cos(a) * r;
+      if (isClear(x, z, 26)) { clearing = { x, z }; break outer; }
+    }
+  }
+  // Top of the canopy near (x, z): the tallest tree standing within `pad`
+  // metres, or -Infinity where the ground is open.
+  const canopyTop = (x, z, pad) => {
+    let top = -Infinity;
+    for (const p of trees) {
+      const dx = p.x - x, dz = p.z - z;
+      if (dx * dx + dz * dz >= pad * pad) continue;
+      // One bad placement must not NaN-poison the camera through Math.max.
+      const th = p.y + (Number.isFinite(p.h) ? p.h : 24);
+      if (Number.isFinite(th) && th > top) top = th;
+    }
+    return top;
+  };
+  scene._ep2Staging = { clearing, canopyTop };
+  return scene._ep2Staging;
+}
+
 function driveSurface(scene, dir, index) {
   const sea = scene.seaLevelLocal ?? scene.surface.bounds?.seaLevelLocal ?? -Infinity;
   // Ground you can stand on: real terrain, but never below the water surface —
   // so a camera anchored to it never sinks under the ocean and goes black.
   const surfaceY = (x, z) => Math.max(scene.surface.heightAt(x, z), sea);
   const sun = scene.sunDirection ?? new THREE.Vector3(0.35, 0.42, 0.84);
+  const { clearing, canopyTop } = surfaceStaging(scene);
   let t = 0;
 
   if (dir.phase === 'descent') {
-    // Glide down out of the sky to just above the landing site, looking toward
-    // the sun so the horizon (not dark ground) fills the frame.
+    // Glide down out of the sky into the clearing, looking toward the sun so
+    // the horizon (not dark ground) fills the frame — holding clearance over
+    // the canopy until the final drop, so the lens never enters a tree.
+    const h = Math.hypot(sun.x, sun.z) || 1;
+    const ux = -sun.x / h, uz = -sun.z / h; // approach from down-sun
     scene.cameraDriver = (camera, dt) => {
       t += dt;
       const k = ss(0, 7, t);
-      const base = surfaceY(0, (1 - k) * 40);
-      camera.position.set(0, base + 3 + (1 - k) * 220, (1 - k) * 40);
-      camera.lookAt(sun.x * 400, surfaceY(0, 0) + 30 + (1 - k) * 60, sun.z * 400);
+      const x = clearing.x + ux * 40 * (1 - k);
+      const z = clearing.z + uz * 40 * (1 - k);
+      const ground = surfaceY(x, z);
+      const clearance = Math.max(0, canopyTop(x, z, 24) + 6 - ground) * Math.min(1, (1 - k) * 3);
+      camera.position.set(x, ground + 3 + clearance + (1 - k) * 220, z);
+      camera.lookAt(
+        x + sun.x * 400,
+        surfaceY(clearing.x, clearing.z) + 30 + (1 - k) * 60,
+        z + sun.z * 400,
+      );
     };
     return;
   }
   if (dir.phase === 'shallows') {
     scene.cameraDriver = (camera, dt) => {
       t += dt;
-      const x = Math.sin(t * 0.15) * 4;
-      camera.position.set(x, surfaceY(x, 6) + 2.5, 6);
-      camera.lookAt(sun.x * 200, surfaceY(0, 0) + 12, sun.z * 200);
+      const x = clearing.x + Math.sin(t * 0.15) * 4;
+      const z = clearing.z + 6;
+      camera.position.set(x, surfaceY(x, z) + 2.5, z);
+      camera.lookAt(
+        clearing.x + sun.x * 200,
+        surfaceY(clearing.x, clearing.z) + 12,
+        clearing.z + sun.z * 200,
+      );
     };
     return;
   }
   // Acts 3–5: a slow cinematic look around the living site, varied per cue so
-  // the tour never sits on one framing, and always kept above the waterline.
+  // the tour never sits on one framing. Wide orbits stand off in the trees, so
+  // those ride above the canopy and look down into the clearing.
   const seed = index * 1.3;
   const dist = 26 + (index % 4) * 10;
   const elev = 4 + (index % 3) * 4;
@@ -112,9 +167,10 @@ function driveSurface(scene, dir, index) {
   scene.cameraDriver = (camera, dt) => {
     t += dt;
     const az = seed + dirSign * t * 0.06;
-    const cx = Math.sin(seed) * 30, cz = Math.cos(seed) * 30;
+    const cx = clearing.x + Math.sin(seed) * 10, cz = clearing.z + Math.cos(seed) * 10;
     const x = cx + Math.sin(az) * dist, z = cz + Math.cos(az) * dist;
-    camera.position.set(x, surfaceY(x, z) + elev, z);
+    const y = Math.max(surfaceY(x, z) + elev, canopyTop(x, z, 18) + 5);
+    camera.position.set(x, y, z);
     // Look slightly up toward the horizon, never straight down into dark ground.
     camera.lookAt(cx, surfaceY(cx, cz) + 8, cz);
   };

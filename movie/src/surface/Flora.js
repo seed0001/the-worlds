@@ -162,7 +162,14 @@ export class Flora {
         if (n.y < flora.maxSlope) continue;              // too steep to root
 
         const variant = weighted[Math.floor(rng() * weighted.length)];
-        const scale = variant.unitScale * rng.range(variant.species.scale.min, variant.species.scale.max);
+        // species.scale was already resolved to one number per world by
+        // rollRanges() — reading .min/.max off it gives undefined, the roll
+        // comes out NaN, and every instance matrix in the forest is NaN (i.e.
+        // no tree ever draws). Treat the rolled value as the species' mean and
+        // jitter per instance around it.
+        const sc = variant.species.scale;
+        const roll = typeof sc === 'number' ? sc * rng.range(0.85, 1.15) : rng.range(sc.min, sc.max);
+        const scale = variant.unitScale * roll;
 
         const matrix = new THREE.Matrix4();
         const quat = new THREE.Quaternion();
@@ -180,7 +187,13 @@ export class Flora {
         );
 
         variant.instances.push(matrix);
-        this.placements.push({ x, z, y: p.y, preset: variant.species.preset });
+        this.placements.push({
+          x, z, y: p.y,
+          // Real height of this instance in metres — camera paths use it to
+          // stay above the canopy instead of flying through it.
+          h: (TARGET_HEIGHT_M[variant.species.preset] ?? 12) * (scale / variant.unitScale),
+          preset: variant.species.preset,
+        });
       }
     }
 
