@@ -23,7 +23,7 @@ class Z {
     return t /= 4294967296, (i - e) * t + e;
   }
 }
-class D {
+class P {
   /**
    * Generates a new branch
    * @param {THREE.Vector3} origin The starting point of the branch
@@ -681,7 +681,7 @@ const K = 26867, ee = "deciduous", te = {
   branch: Be,
   leaves: Le,
   trellis: Fe
-}, Ae = 30631, De = "deciduous", Ee = {
+}, Ae = 30631, Pe = "deciduous", Ee = {
   type: "Bark002",
   tint: 16777215,
   flatShading: !1,
@@ -757,7 +757,7 @@ const K = 26867, ee = "deciduous", te = {
     2: 0,
     3: 0
   }
-}, Pe = {
+}, De = {
   type: "aspen",
   billboard: "double",
   angle: 36,
@@ -771,10 +771,10 @@ const K = 26867, ee = "deciduous", te = {
   enabled: !1
 }, _e = {
   seed: Ae,
-  type: De,
+  type: Pe,
   bark: Ee,
   branch: Ge,
-  leaves: Pe,
+  leaves: De,
   trellis: Qe
 }, qe = 45590, je = "deciduous", Ne = {
   type: "Bark001",
@@ -1434,14 +1434,14 @@ const K = 26867, ee = "deciduous", te = {
   alphaTest: 0.3
 }, At = {
   enabled: !1
-}, Dt = {
+}, Pt = {
   seed: Tt,
   type: Bt,
   bark: Lt,
   branch: Ft,
   leaves: Ot,
   trellis: At
-}, Et = 13977, Gt = "evergreen", Pt = {
+}, Et = 13977, Gt = "evergreen", Dt = {
   type: "Bark003",
   tint: 16777215,
   flatShading: !1,
@@ -1532,7 +1532,7 @@ const K = 26867, ee = "deciduous", te = {
 }, jt = {
   seed: Et,
   type: Gt,
-  bark: Pt,
+  bark: Dt,
   branch: Qt,
   leaves: _t,
   trellis: qt
@@ -1755,7 +1755,7 @@ const K = 26867, ee = "deciduous", te = {
   "Oak Small": gt,
   "Oak Medium": wt,
   "Oak Large": Ct,
-  "Pine Small": Dt,
+  "Pine Small": Pt,
   "Pine Medium": jt,
   "Pine Large": Ht,
   Trellis: ss
@@ -1819,7 +1819,7 @@ class as extends s.Group {
     }), this.clear(), this.hCylinderGeo && (this.hCylinderGeo.dispose(), this.hCylinderGeo = null), this.vCylinderGeo && (this.vCylinderGeo.dispose(), this.vCylinderGeo = null), this.material && (this.material.dispose(), this.material = null);
   }
 }
-var u, G, F, O, R, P, W, X, V, Q, _;
+var u, G, F, O, R, D, W, X, V, Q, _;
 const A = class A extends s.Group {
   /**
    * @param {TreeOptions} params
@@ -1941,7 +1941,7 @@ const A = class A extends s.Group {
       );
       let Y = this.options.branch.length[t] * (this.options.type === L.Evergreen ? 1 - o : 1);
       this.branchQueue.push(
-        new D(
+        new P(
           y,
           B,
           Y,
@@ -1984,7 +1984,7 @@ const A = class A extends s.Group {
       ), $ = new s.Quaternion().setFromEuler(b), C = new s.Euler().setFromQuaternion(
         $.multiply(S.multiply(z))
       );
-      f(this, u, P).call(this, d, C);
+      f(this, u, D).call(this, d, C);
     }
   }
   /**
@@ -2070,7 +2070,7 @@ F = function() {
     branches: [],
     leaves: []
   }, this.rng = new Z(this.options.seed), this.branchQueue.push(
-    new D(
+    new P(
       new s.Vector3(),
       new s.Euler(),
       this.options.branch.length[0],
@@ -2158,7 +2158,7 @@ R = function(e) {
   }), this.options.type === "deciduous") {
     const l = a[a.length - 1];
     e.level < this.options.branch.levels ? this.branchQueue.push(
-      new D(
+      new P(
         l.origin,
         l.orientation,
         this.options.branch.length[e.level + 1],
@@ -2169,7 +2169,7 @@ R = function(e) {
         e.sectionCount,
         e.segmentCount
       )
-    ) : f(this, u, P).call(this, l.origin, l.orientation);
+    ) : f(this, u, D).call(this, l.origin, l.orientation);
   }
   e.level === this.options.branch.levels ? this.generateLeaves(a) : e.level < this.options.branch.levels && this.generateChildBranches(
     this.options.branch.children[e.level],
@@ -2182,7 +2182,7 @@ R = function(e) {
 * @param {THREE.Vector3} origin The starting point of the leaf
 * @param {THREE.Euler} orientation The orientation of the leaf
 */
-P = function(e, t) {
+D = function(e, t) {
   const n = this.options.leaves.size * (1 + this.rng.random(
     this.options.leaves.sizeVariance,
     -this.options.leaves.sizeVariance
@@ -2435,6 +2435,14 @@ _ = function() {
       "#include <project_vertex>",
       `
         vec4 mvPosition = vec4(transformed, 1.0);
+
+        // The stock project_vertex chunk applies instanceMatrix before the
+        // model-view transform; this replacement must too, or every leaf of an
+        // InstancedMesh renders at the raw geometry position — a giant
+        // superimposed leaf ball at the mesh origin, and bare trees everywhere.
+        #ifdef USE_INSTANCING
+          mvPosition = instanceMatrix * mvPosition;
+        #endif
 
         float windOffset = 2.0 * 3.14 * simplex3(mvPosition.xyz / uWindScale);
         vec3 windSway = uv.y * uWindStrength * (

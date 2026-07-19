@@ -1053,6 +1053,14 @@ export class Tree extends THREE.Group {
         `
         vec4 mvPosition = vec4(transformed, 1.0);
 
+        // The stock project_vertex chunk applies instanceMatrix before the
+        // model-view transform; this replacement must too, or every leaf of an
+        // InstancedMesh renders at the raw geometry position — a giant
+        // superimposed leaf ball at the mesh origin, and bare trees everywhere.
+        #ifdef USE_INSTANCING
+          mvPosition = instanceMatrix * mvPosition;
+        #endif
+
         float windOffset = 2.0 * 3.14 * simplex3(mvPosition.xyz / uWindScale);
         vec3 windSway = uv.y * uWindStrength * (
           0.5 * sin(uTime * uWindFrequency + windOffset) +

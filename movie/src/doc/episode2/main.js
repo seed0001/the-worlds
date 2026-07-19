@@ -190,19 +190,102 @@ function driveSurface(scene, dir, index) {
   // varied per cue so the tour never repeats a framing.
   const wide = dir.focus === 'world' || dir.site === 'vista';
   const seed = index * 1.3;
-  const dist = (wide ? 130 : 60) + (index % 3) * 30;
-  const elev = (wide ? 55 : 24) + (index % 4) * 10;
+  // True aerials. From inside the tree-height zone every establishing shot is
+  // mostly the nearest crown (a 22 m tree 37 m out fills half a 42° lens); at
+  // this distance and height the same tree is ~5° tall and the site reads as
+  // landscape — forest, clearing, herds, horizon.
+  const dist = (wide ? 260 : 170) + (index % 3) * 40;
+  const elev = (wide ? 110 : 70) + (index % 4) * 15;
   const dirSign = index % 2 ? 1 : -1;
+  const cx = clearing.x, cz = clearing.z;
+  // Scout the shot before flying it: on rolling forested terrain ANY fixed
+  // orbit sometimes parks a hillside crown on the sightline, and one crown at
+  // 60 m fills half the lens. March the camera→site ray at two dozen azimuths
+  // and fly the one with the most clearance over terrain and canopy.
+  const targetY = surfaceY(cx, cz) + elev * 0.35;
+  let bestAz = seed, bestMargin = -Infinity;
+  for (let k = 0; k < 24; k++) {
+    const az = seed + (k / 24) * Math.PI * 2;
+    const x0 = cx + Math.sin(az) * dist, z0 = cz + Math.cos(az) * dist;
+    const y0 = Math.max(surfaceY(x0, z0) + elev, canopyTop(x0, z0, 30) + 10);
+    let margin = Infinity;
+    for (let f = 0.08; f < 0.92; f += 0.07) {
+      const x = x0 + (cx - x0) * f, z = z0 + (cz - z0) * f;
+      const ray = y0 + (targetY - y0) * f;
+      const blocker = Math.max(surfaceY(x, z) + 2, canopyTop(x, z, 16));
+      margin = Math.min(margin, ray - blocker);
+    }
+    if (margin > bestMargin) { bestMargin = margin; bestAz = az; }
+  }
+  // Even the best lane can be blocked — a hill 50 m higher than the camera's
+  // ground puts an ordinary tree at lens height. Climb by the deficit: the
+  // target end of the ray is inside the clearing (clear by construction), so
+  // raising the camera raises the whole sightline over the blocker.
+  const elevBoost = Math.max(0, 12 - bestMargin);
   scene.cameraDriver = (camera, dt) => {
     t += dt;
-    const az = seed + dirSign * t * 0.05;
-    const cx = clearing.x, cz = clearing.z;
+    const az = bestAz + dirSign * t * 0.02; // slow drift stays inside the scouted lane
     const x = cx + Math.sin(az) * dist, z = cz + Math.cos(az) * dist;
-    const y = Math.max(surfaceY(x, z) + elev, canopyTop(x, z, 18) + 6);
+    const y = Math.max(surfaceY(x, z) + elev + elevBoost, canopyTop(x, z, 30) + 10);
     camera.position.set(x, y, z);
-    // Look across the site toward the horizon, never straight down.
-    camera.lookAt(cx - Math.sin(az) * dist * 0.5, surfaceY(cx, cz) + 10, cz - Math.cos(az) * dist * 0.5);
+    // Shoot ACROSS the site, not down into it: a gentle tilt keeps the horizon
+    // in the top third and the forest on the ground plane.
+    camera.lookAt(cx, targetY, cz);
   };
+}
+
+/**
+ * Act 4's staged events — the chain of cause and effect the narrator follows.
+ * Each event cue triggers the behaviour verb on the exact populations the
+ * script is talking about; the camera is already on them via filmTarget.
+ */
+const _ec = new THREE.Vector3();
+const _ec2 = new THREE.Vector3();
+function centreOf(pop, out) {
+  out.set(0, 0, 0);
+  for (const a of pop.agents) out.add(a.pos);
+  return out.divideScalar(Math.max(1, pop.agents.length));
+}
+
+function fireEvent(scene, dir) {
+  if (!dir.event) return;
+  const P = (k) => filmTarget(scene, 'species' + k);
+  const A = P('A'), B = P('B'), C = P('C'), D = P('D'), E = P('E'), F = P('F');
+  // Direction from one band toward another, on the ground plane. Falls back to
+  // a fixed bearing when the two are the same population (small-roster worlds).
+  const toward = (from, to, fallbackAngle = 0.8) => {
+    const fb = new THREE.Vector3(Math.sin(fallbackAngle), 0, Math.cos(fallbackAngle));
+    if (!from || !to || from === to) return fb;
+    const d = centreOf(to, _ec2).sub(centreOf(from, _ec)).setY(0);
+    return d.lengthSq() > 1 ? d.normalize() : fb;
+  };
+  switch (dir.event) {
+    case 'startle-flock':
+      A?.startle?.(toward(A, B), 7);
+      break;
+    case 'spook-herd':
+      // The herd catches the flock's fear and runs ahead of it.
+      B?.stampede?.(toward(A, B), 9);
+      break;
+    case 'predator-commit':
+      if (C && C !== B) C.rush?.(() => centreOf(B ?? C, _ec), 7);
+      B?.stampede?.(toward(C ?? A, B), 7, 2.6);
+      break;
+    case 'swarm-rise':
+      // Only an actual swarm rides a thermal. On worlds whose roster has no
+      // swarm the D slot falls back to a herd — big quadrupeds must not
+      // levitate, so they surge across the ground instead.
+      if (D?.genome.role === 'swarm') D.rise?.(11);
+      else D?.stampede?.(toward(C ?? B, D, 1.9), 6, 1.4);
+      break;
+    case 'highland-link':
+      E?.stampede?.(toward(B, E, 2.4), 5, 1.2); // moves off, unhurried
+      if (F && F !== E) F.stampede?.(toward(E, F, -1.2), 5, 1.6); // flushed
+      break;
+    case 'settle':
+      for (const pop of scene.fauna?.populations ?? []) pop.calm?.();
+      break;
+  }
 }
 
 /**
@@ -236,7 +319,10 @@ const director = async (cue) => {
     // Deep time: cues carry their era; anything without one (Acts 4–5) plays
     // on the finished world. The descent and shallows land before life exists.
     s.setEra(dir.era ?? 5);
+    // Evening reaches the interior at the dusk cue and stays for the close.
+    if (dir.phase === 'dusk') s.setMood?.('dusk');
     driveSurface(s, dir, cueIndex);
+    fireEvent(s, dir);
   }
   else if (s instanceof SystemScene) {
     s.setPhase?.('reveal');
