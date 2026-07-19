@@ -56,6 +56,13 @@ Beats:
 7. **Mats.** Cells in their billions, staining the shallows — the first
    visible life, the bridge to Act 3.
 
+**Planted here for Episode 3:** the soup splits the replicator lineage two
+ways. Most build bodies and become the tree of life this series follows; some
+never build a body and stay parasitic, making their living inside other
+cells. That second lineage is barely a whisper here — one line of narration —
+but it is the origin of Episode 3's plague, which is derived from this same
+chemistry rather than borrowed from Earth. Seed it now so it pays off later.
+
 ### Act 3 — Fast-forwards (the same valley through deep time)
 
 Locked on **one landing site**. Time jumps forward in hard cuts and the same

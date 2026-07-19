@@ -26,23 +26,31 @@ Episode 3 makes a deliberate, documented departure:
   without tin and copper in the ground; a metal-poor cloud gets a different
   technological path), climate and disease pressure from the planet's real
   temperature and biomes.
-- **Historically mirrored to Earth.** The *shape* of the arc — the sequence
-  from language to agriculture to cities to industry to information, the way
-  plagues follow population density and trade, the way a species changes its
-  atmosphere by burning what it finds — is modeled on Earth's record, because
-  Earth is the only record there is. The narrator is honest about this rather
-  than pretending otherwise: this is the one story we know, told about a
-  different world, bent by that world's real constraints.
+- **Historically mirrored to Earth.** The *shape* of the social arc — the
+  sequence from language to agriculture to cities to industry to information,
+  the way a species changes its atmosphere by burning what it finds — is
+  modeled on Earth's record, because Earth is the only record there is. The
+  narrator is honest about this rather than pretending otherwise: this is the
+  one story we know, told about a different world, bent by that world's real
+  constraints.
 
 The rule for the script: **never state an Earth-mirrored beat as a derived
 fact.** If a number comes from the sim, speak it plainly. If a pattern comes
 from Earth, frame it as pattern ("everywhere intelligence has arisen that we
 know of, this has followed") — the mirror is the honesty, not a cheat.
 
+**Disease is the exception, and it stays derived.** Plague is *not*
+Earth-mirrored in this episode. It is reframed as another form of life on
+this planet — a competing lineage from the same primordial soup — and
+therefore derived from the same chemistry as everything else (see Act 4). The
+one act that would have leaned hardest on Earth instead becomes one of the
+most seed-honest in the series.
+
 So the seed still matters and still changes the story: a heavy-gravity world
 builds squat humanoids and low architecture; a metal-poor world's technology
-plateaus differently; a hot world's plagues and migrations run on a different
-map. Same Earth-shaped arc, different world running it.
+plateaus differently; a world whose life is built on different chemistry
+breeds a different pathogen with a different way of killing. Same Earth-shaped
+social arc, different world running it — and its own, wholly native, plagues.
 
 ## Act structure (five sections)
 
@@ -85,24 +93,54 @@ dial is technological, gated by the planet's real materials:
 The point the narrator carries across the jumps: each era is built from the
 last, faster each time, and the acceleration itself is the story.
 
-### Act 4 — The invisible war (viruses, plague, health)
+### Act 4 — The invisible war (the other lineage)
 
-The dynamic the user specifically called for. Disease is not decoration — it
-is a force with its own logic, and Episode 3 treats it as one:
+The dynamic the user called for, reframed into the strongest idea in the
+episode: **the plague is not a disaster that happens to life — it is life.**
+Back in Episode 2's soup, the first replicators split two ways. Most became
+cells: they built bodies, metabolized, cooperated, became the tree of life the
+whole series has been following. But some replicators never built a body of
+their own. They stayed small, stayed parasitic, and made their living by
+copying themselves inside someone else's cell. That lineage never went away.
+By the humanoid era it has been competing for the same chemistry, on the same
+world, for as long as everything else — and now it meets its richest host yet:
+a crowded, connected civilization.
 
-- **Grounded in biology and density.** Plagues follow the things the sim and
-  the mirror both give us: population density (from Act 3's cities), trade and
-  travel routes (contact between settlements), and the humanoid's own biology.
-  Crowding breeds contagion; connection spreads it.
-- **The pattern, mirrored honestly.** The great mortality events — a plague
-  that ravages a crowded era, the exchange of diseases when isolated
-  populations first meet, the race between a pathogen and the medicine the
-  civilization can muster — are modeled on Earth's record and framed as
-  pattern, not prophecy.
-- **Both directions.** Disease shapes the species (it culls, it selects, it
-  redraws populations) and the species learns to fight back (sanitation,
-  medicine, immunization) — the arms race that is still running at the
-  episode's end.
+This act is **derived, not mirrored.** We build this world's own pathogen from
+its own chemistry — a real theoretical organism, not Earth's flu with the name
+filed off:
+
+- **What it is made of.** Life on this world runs on a specific information
+  polymer and a specific set of elements (`cosmos.budget` + the biochemistry
+  Episode 2 established). The pathogen is built from the *same* stock — it has
+  to be, to hijack the host's machinery — so its molecular form is derived
+  from the host's: a rogue strand of the world's own replicator molecule,
+  sheathed in a coat of whatever the host body makes cheaply.
+- **How it spreads.** Its transmission vector is derived from the planet, not
+  assumed: a thick-aired warm world favors an airborne route; a water-rich
+  world, a waterborne one; a cold thin-aired world pushes it to contact or to
+  a carrier species from Episode 2's roster. The biome the civilization lives
+  in picks the vector.
+- **How it kills, and how fast.** Virulence vs. transmissibility is a real
+  trade-off (a pathogen that kills too fast burns out); the balance it settles
+  on is derived from host density (Act 3's cities), host biology, and the
+  world's temperature. The result is a named, described plague specific to
+  this seed — its symptoms follow from which host system its chemistry
+  attacks.
+- **The arms race, both directions.** Host immunity and pathogen mutation
+  push on each other; the civilization answers with sanitation, then medicine,
+  then something like immunization — using the materials the element budget
+  allows (a metal-poor or chemistry-poor world fights the plague with a weaker
+  hand). This co-evolution is still running when the episode ends, exactly as
+  it does everywhere life competes with life.
+
+The narrator's thread: this world made two kinds of life in the same warm
+water, and they have been at war ever since — one you can see, and one you
+cannot. Only the crowd of a civilization finally made that war visible.
+
+(The Earth mirror still whispers here — density-drives-contagion is a pattern
+we know — but the *organism itself* is this planet's, derived end to end. That
+is the whole point of the reframe.)
 
 ### Act 5 — The mark (the present, and the changed planet)
 
@@ -145,13 +183,24 @@ this world's chemistry actually permits — so the eras in Act 3 are
 seed-honest, not fixed. This is the mechanism that keeps a metal-poor world's
 story genuinely different.
 
-### 4. A history/epidemiology model (Earth-mirrored, sim-parameterized)
+### 4a. A history model (Earth-mirrored, sim-parameterized)
 
-The engine behind Acts 3–5: population growth, settlement, plague events, and
-planetary change, shaped like Earth's record but parameterized by the seed's
-real numbers (temperature, density, materials, biomes). Deterministic per
-seed. This is the most novel and most careful piece — its whole job is to be
-honest about being a mirror.
+The engine behind Acts 3 and 5: population growth, settlement, and planetary
+change, shaped like Earth's record but parameterized by the seed's real
+numbers (temperature, density, materials, biomes). Deterministic per seed. Its
+whole job is to be honest about being a mirror.
+
+### 4b. A pathogen-derivation model (fully sim-derived) — Act 4
+
+Distinct from 4a and *not* Earth-mirrored. Given the world's biochemistry
+(Episode 2's replicator molecule and element budget), the host humanoid's
+biology, the biome, and Act 3's population density, it derives one theoretical
+pathogen: its molecular makeup, its transmission vector, its
+virulence/transmissibility balance, its symptoms, and the trajectory of the
+host–pathogen arms race. Deterministic per seed; every property traceable to a
+planetary fact. This is the piece that makes the plague act true by
+construction instead of borrowed. Ideally the parasitic lineage is *seeded
+back in Episode 2's soup act*, so Act 4 is a payoff, not an introduction.
 
 ### 5. `buildEpisode3Script(cosmos, world, history)`
 
@@ -172,6 +221,11 @@ honesty framing audible without lecturing.
   planet permits (user).
 - Must factor in viruses, plagues, and health as a real dynamic, not
   decoration (user).
+- **Plague is reframed as another lineage of life** — competing life from the
+  same primordial soup — so it is *derived from this planet's chemistry, not
+  mirrored to Earth*. Act 4 builds a real theoretical pathogen native to the
+  seed (molecular makeup, vector, virulence, symptoms) from the given
+  materials and host biology (user, 2026-07-19).
 - All of it in one episode, structured as five acts (user).
 
 ## Open items
