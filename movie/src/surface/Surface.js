@@ -192,12 +192,16 @@ export class Surface {
 
     const geometry = new THREE.PlaneGeometry(this.size * 2, this.size * 2);
     geometry.rotateX(-Math.PI / 2);
+    // Reflective, but not a perfect mirror: some roughness keeps the sky
+    // reflection soft, and the scene environment (see SurfaceScene) means those
+    // reflections render the sky rather than black at grazing angles.
     const material = new THREE.MeshStandardMaterial({
       color: new THREE.Color(...this.world.colors.color1).multiplyScalar(2.2),
-      roughness: 0.12,
+      roughness: 0.22,
       metalness: 0.1,
+      envMapIntensity: 1.0,
       transparent: true,
-      opacity: 0.88,
+      opacity: 0.9,
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.y = seaLevelLocal;

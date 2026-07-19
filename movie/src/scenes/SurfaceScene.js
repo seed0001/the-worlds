@@ -43,6 +43,37 @@ void main() {
 }
 `;
 
+// A cheap equirectangular sky gradient used as scene.environment. Without an
+// environment, smooth PBR surfaces (the water especially) reflect nothing and
+// render BLACK at grazing angles — the classic "black water" bug. Reflecting a
+// sky-coloured gradient instead gives the water a real surface and gives every
+// material a little image-based ambient. Built from this world's own sky.
+function skyEnvironment(s) {
+  const W = 16, H = 64;
+  const data = new Uint8Array(W * H * 4);
+  const sky = new THREE.Color(s.sky);
+  const horizon = new THREE.Color(s.horizon);
+  const below = new THREE.Color(s.fog); // hazy distance/ground the water reflects
+  const c = new THREE.Color();
+  for (let y = 0; y < H; y++) {
+    const t = y / (H - 1); // 0 nadir -> 1 zenith
+    if (t > 0.5) c.copy(horizon).lerp(sky, (t - 0.5) * 2);
+    else c.copy(below).lerp(horizon, t * 2);
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      data[i] = Math.round(c.r * 255);
+      data[i + 1] = Math.round(c.g * 255);
+      data[i + 2] = Math.round(c.b * 255);
+      data[i + 3] = 255;
+    }
+  }
+  const tex = new THREE.DataTexture(data, W, H, THREE.RGBAFormat);
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 export class SurfaceScene {
   /**
    * `cinematic: true` skips the FlyCamera — the caller drives the camera by
@@ -115,6 +146,11 @@ export class SurfaceScene {
     this.sky.name = 'sky';
     this.scene.add(this.sky);
 
+    // Image-based ambient from the sky, so PBR reflections (water!) aren't black.
+    this.envMap = skyEnvironment(s);
+    this.scene.environment = this.envMap;
+    this.scene.environmentIntensity = 0.6;
+
     // Lighting: one hard key for the star, plus hemisphere fill so shadowed
     // faces pick up bounce from ground and sky instead of going black.
     this.sun = new THREE.DirectionalLight(new THREE.Color(s.sunColor), s.sunIntensity);
@@ -184,6 +220,8 @@ export class SurfaceScene {
   }
 
   dispose() {
+    this.scene.environment = null;
+    this.envMap?.dispose();
     this.controls?.dispose();
     this.fauna?.dispose();
     this.flora?.dispose();
