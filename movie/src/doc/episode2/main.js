@@ -7,15 +7,15 @@ import { OrbitScene } from '../../scenes/OrbitScene.js';
 import { SurfaceScene } from '../../scenes/SurfaceScene.js';
 import { SystemScene } from '../SystemScene.js';
 import { SoupScene } from '../SoupScene.js';
-import { buildEpisode2Script, buildEpisode2Gate, principalCast } from './narration.js';
+import { buildEpisode2Script, buildEpisode2Gate } from './narration.js';
 
 // Episode 2 player. Same machinery as the Episode 1 site (Stage, Narrator,
 // Timeline) with a director that maps each cue's scene onto one of four stages
-// and drives its camera. This is the wiring milestone: the full episode plays
-// end to end — descent, the soup, the deep-time eras and the living-world tour —
-// narrated cue by cue. The era dial, the multi-biome terrain and the staged
-// interactions are the next milestones; here those cues play over the real
-// surface with cinematic camera, and every spoken FACT is already derived.
+// and drives its camera. The surface stage spawns the narration's principal
+// cast (fauna/cast.js) — zone-built bodies at staged climate sites — so a
+// species cue films the exact population the words describe, a site cue flies
+// to the real place that population lives, and the Act 4 chain (startle,
+// stampede, rush, rise, settle) fires on those same animals.
 
 const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
@@ -50,7 +50,7 @@ let surfaceReady = null;
 if (living) {
   stage.register('orbit', new OrbitScene(world, { interactive: false }));
   stage.register('soup', new SoupScene(world));
-  const surface = new SurfaceScene(world, { cinematic: true });
+  const surface = new SurfaceScene(world, { cinematic: true, castSeed: cosmos.seed });
   stage.register('surface', surface);
   // Warm the surface now — meshing terrain and growing trees takes seconds, and
   // the opening minutes are in orbit and the soup, so the cut to ground is a cut.
@@ -112,6 +112,10 @@ function surfaceStaging(scene) {
   return scene._ep2Staging;
 }
 
+// Act 3's deep-time eras all play inside ONE locked frame — the narration
+// stakes itself on "the camera will not move", so the camera must not move.
+const LOCKED_PHASES = new Set(['sterile', 'stained', 'greening', 'rooted', 'firstmovers', 'fullroster']);
+
 function driveSurface(scene, dir, index) {
   const sea = scene.seaLevelLocal ?? scene.surface.bounds?.seaLevelLocal ?? -Infinity;
   // Ground you can stand on: real terrain, but never below the water surface —
@@ -120,6 +124,53 @@ function driveSurface(scene, dir, index) {
   const sun = scene.sunDirection ?? new THREE.Vector3(0.35, 0.42, 0.84);
   const { clearing, canopyTop } = surfaceStaging(scene);
   let t = 0;
+
+  // Scout a shot before flying it: on rolling forested terrain ANY fixed orbit
+  // sometimes parks a hillside crown on the sightline, and one crown at 60 m
+  // fills half the lens. March the camera→site ray at two dozen azimuths and
+  // pick the one with the most clearance over terrain and canopy; if even the
+  // best lane is blocked, climb by the deficit (the target end of the ray is
+  // open ground, so raising the camera raises the whole sightline).
+  const scout = (cx, cz, dist, elev, seed) => {
+    const targetY = surfaceY(cx, cz) + elev * 0.35;
+    let bestAz = seed, bestMargin = -Infinity;
+    for (let k = 0; k < 24; k++) {
+      const az = seed + (k / 24) * Math.PI * 2;
+      const x0 = cx + Math.sin(az) * dist, z0 = cz + Math.cos(az) * dist;
+      const y0 = Math.max(surfaceY(x0, z0) + elev, canopyTop(x0, z0, 30) + 10);
+      let margin = Infinity;
+      for (let f = 0.08; f < 0.92; f += 0.07) {
+        const x = x0 + (cx - x0) * f, z = z0 + (cz - z0) * f;
+        const ray = y0 + (targetY - y0) * f;
+        const blocker = Math.max(surfaceY(x, z) + 2, canopyTop(x, z, 16));
+        margin = Math.min(margin, ray - blocker);
+      }
+      if (margin > bestMargin) { bestMargin = margin; bestAz = az; }
+    }
+    return { bestAz, elevBoost: Math.max(0, 12 - bestMargin), targetY };
+  };
+
+  if (LOCKED_PHASES.has(dir.phase)) {
+    // One framing of the shore, chosen once per scene and reused verbatim by
+    // every era cue: same position, same target, zero drift. Six eras, one
+    // frame — the only thing allowed to change is time.
+    const shot = (scene._ep2LockedShot ??= (() => {
+      const dist = 200, elev = 85;
+      const { bestAz, elevBoost, targetY } = scout(clearing.x, clearing.z, dist, elev, 0.7);
+      const x = clearing.x + Math.sin(bestAz) * dist;
+      const z = clearing.z + Math.cos(bestAz) * dist;
+      const y = Math.max(surfaceY(x, z) + elev + elevBoost, canopyTop(x, z, 30) + 10);
+      return {
+        pos: new THREE.Vector3(x, y, z),
+        target: new THREE.Vector3(clearing.x, targetY, clearing.z),
+      };
+    })());
+    scene.cameraDriver = (camera) => {
+      camera.position.copy(shot.pos);
+      camera.lookAt(shot.target);
+    };
+    return;
+  }
 
   if (dir.phase === 'descent') {
     // Glide down out of the sky into the clearing, looking toward the sun so
@@ -161,18 +212,84 @@ function driveSurface(scene, dir, index) {
   // — the same population the narrator's cast picked, tracked at its live
   // centre exactly like the teaser's creature shots.
   const pop = filmTarget(scene, dir.focus);
+  // The commit is the one species shot that does NOT track its animal: the
+  // narrator says the chase resolves where we cannot follow, so the camera
+  // plants itself beside the launch point, holds still, and lets hunter and
+  // herd run through the frame and out of it.
+  if (pop && dir.event === 'predator-commit' && pop.agents.length) {
+    const start = pop.agents[0].pos.clone();
+    const herd = filmTarget(scene, 'speciesB');
+    const axis = herd
+      ? centreOf(herd, new THREE.Vector3()).sub(start).setY(0).normalize()
+      : new THREE.Vector3(1, 0, 0);
+    const side = new THREE.Vector3(-axis.z, 0, axis.x);
+    const aim = start.clone().addScaledVector(axis, 30);
+    aim.y = surfaceY(aim.x, aim.z) + 2;
+    // The scrub has trees; a blindly planted camera ends up inside one. Try a
+    // handful of side positions and keep the clearest sightline to the chase.
+    let eye = null, bestM = -Infinity;
+    for (const s of [42, -42, 62, -62]) {
+      for (const back of [10, 26]) {
+        const c = start.clone().addScaledVector(axis, back).addScaledVector(side, s);
+        c.y = surfaceY(c.x, c.z) + 7;
+        let m = Infinity;
+        for (let f = 0.1; f < 0.95; f += 0.1) {
+          const x = c.x + (aim.x - c.x) * f, z = c.z + (aim.z - c.z) * f;
+          const ray = c.y + (aim.y - c.y) * f;
+          m = Math.min(m, ray - Math.max(surfaceY(x, z) + 1.5, canopyTop(x, z, 14)));
+        }
+        if (m > bestM) { bestM = m; eye = c; }
+      }
+    }
+    eye.y += Math.max(0, 8 - bestM);
+    scene.cameraDriver = (camera) => {
+      camera.position.copy(eye);
+      camera.lookAt(aim);
+    };
+    return;
+  }
+  // The thermal column is filmed from the ground, wide: base, land and sky in
+  // one frame, the aim tilting up as the spiral climbs. Filming it from
+  // underneath (the tracking camera's instinct) turns a rising swarm into
+  // levitating silhouettes on empty blue.
+  if (pop && dir.event === 'swarm-rise') {
+    const base = centreOf(pop, new THREE.Vector3());
+    const baseY = surfaceY(base.x, base.z);
+    const { bestAz, elevBoost } = scout(base.x, base.z, 74, 14, 1.9);
+    const ex = base.x + Math.sin(bestAz) * 74;
+    const ez = base.z + Math.cos(bestAz) * 74;
+    const ey = Math.max(surfaceY(ex, ez) + 14 + elevBoost, canopyTop(ex, ez, 30) + 8);
+    scene.cameraDriver = (camera, dt) => {
+      t += dt;
+      camera.position.set(ex, ey, ez);
+      camera.lookAt(base.x, baseY + 8 + Math.min(24, t * 2.2), base.z);
+    };
+    return;
+  }
   if (pop) {
     const centre = new THREE.Vector3();
     const air = pop.genome.domain === 'air';
+    // A solitary animal is filmed as ONE animal — its bandmates are scattered
+    // across its zone by design, and the centroid of scattered animals is
+    // empty ground the camera would frame instead of a body. The settle close
+    // does the same: rest on one animal folding down, shot from the sun side
+    // so the last light falls on it, drifting barely at all.
+    const settle = dir.event === 'settle';
+    const single = pop.genome.role === 'solitary' || settle;
     const size = pop.genome.size ?? 2;
     const dist = air ? 46 : Math.max(13, size * 8);
     const dirSign = index % 2 ? 1 : -1;
     scene.cameraDriver = (camera, dt) => {
       t += dt;
-      centre.set(0, 0, 0);
-      for (const a of pop.agents) centre.add(a.pos);
-      centre.divideScalar(Math.max(1, pop.agents.length));
-      const az = index * 1.7 + dirSign * t * 0.07;
+      if (single && pop.agents.length) {
+        centre.copy((pop.agents.find((a) => !a.dead) ?? pop.agents[0]).pos);
+      } else {
+        centre.set(0, 0, 0);
+        for (const a of pop.agents) centre.add(a.pos);
+        centre.divideScalar(Math.max(1, pop.agents.length));
+      }
+      const az = (settle ? Math.atan2(sun.x, sun.z) : index * 1.7)
+        + dirSign * t * (settle ? 0.015 : 0.07);
       const x = centre.x + Math.sin(az) * dist;
       const z = centre.z + Math.cos(az) * dist;
       const ground = surfaceY(x, z);
@@ -185,9 +302,66 @@ function driveSurface(scene, dir, index) {
     return;
   }
 
+  // The ridge cue is the episode's one true traveling shot: no cut. The camera
+  // starts exactly where the column shot left it, lifts over the high ground on
+  // a single arc, and arrives overlooking the highland where the next cue's
+  // animal lives. "The camera goes with it" — so it goes.
+  if (dir.site === 'ridge') {
+    const hi = scene.fauna?.sites?.highland ?? clearing;
+    const T = 16;
+    let started = false;
+    const p0 = new THREE.Vector3(), p1 = new THREE.Vector3(), p2 = new THREE.Vector3();
+    const bez = (k, out) => {
+      const a1 = 1 - k;
+      return out.set(
+        a1 * a1 * p0.x + 2 * a1 * k * p1.x + k * k * p2.x,
+        a1 * a1 * p0.y + 2 * a1 * k * p1.y + k * k * p2.y,
+        a1 * a1 * p0.z + 2 * a1 * k * p1.z + k * k * p2.z,
+      );
+    };
+    const pos = new THREE.Vector3(), ahead = new THREE.Vector3();
+    scene.cameraDriver = (camera, dt) => {
+      if (!started) {
+        started = true;
+        p0.copy(camera.position);
+        const dx = hi.x - p0.x, dz = hi.z - p0.z, dd = Math.hypot(dx, dz) || 1;
+        // End: overlooking the highland from 150 m out.
+        p2.set(hi.x - (dx / dd) * 150, 0, hi.z - (dz / dd) * 150);
+        p2.y = Math.max(surfaceY(p2.x, p2.z), surfaceY(hi.x, hi.z)) + 55;
+        // Mid: clear over the highest ground on the way.
+        let hmax = -Infinity;
+        for (let f = 0; f <= 1; f += 0.05) {
+          hmax = Math.max(hmax, surfaceY(p0.x + (p2.x - p0.x) * f, p0.z + (p2.z - p0.z) * f));
+        }
+        p1.set((p0.x + p2.x) / 2, hmax + 60, (p0.z + p2.z) / 2);
+      }
+      t += dt;
+      const k = ss(0, T, t) * 0.97; // ease along the arc, hold just short of the end
+      bez(k, pos);
+      const floor = Math.max(surfaceY(pos.x, pos.z) + 14, canopyTop(pos.x, pos.z, 24) + 10);
+      if (pos.y < floor) pos.y = floor;
+      camera.position.copy(pos);
+      // Look down-path: 130 m ahead along the direction of travel, at the land.
+      bez(Math.min(1, k + 0.03), ahead).sub(pos).setY(0);
+      if (ahead.lengthSq() < 1) ahead.set(hi.x - pos.x, 0, hi.z - pos.z);
+      ahead.normalize().multiplyScalar(130).add(pos);
+      camera.lookAt(ahead.x, surfaceY(ahead.x, ahead.z) + 22, ahead.z);
+    };
+    return;
+  }
+
   // Everything else — ecosystem beats, the deep-time eras, the closing vista —
-  // is an establishing shot: wide, above the canopy, drifting around the site,
-  // varied per cue so the tour never repeats a framing.
+  // is an establishing shot: wide, above the canopy, drifting around the shot's
+  // own place, varied per cue so the tour never repeats a framing. A cue that
+  // names a staged zone (scrub, highland, interior) orbits THAT site, so the
+  // tour actually crosses the patch instead of re-framing the landing clearing.
+  const sites = scene.fauna?.sites;
+  const at = (() => {
+    if (!sites) return clearing;
+    // The coast plays on the landing clearing — same shore, guaranteed open.
+    if (dir.site === 'coast') return clearing;
+    return sites[dir.site] ?? clearing;
+  })();
   const wide = dir.focus === 'world' || dir.site === 'vista';
   const seed = index * 1.3;
   // True aerials. From inside the tree-height zone every establishing shot is
@@ -197,31 +371,8 @@ function driveSurface(scene, dir, index) {
   const dist = (wide ? 260 : 170) + (index % 3) * 40;
   const elev = (wide ? 110 : 70) + (index % 4) * 15;
   const dirSign = index % 2 ? 1 : -1;
-  const cx = clearing.x, cz = clearing.z;
-  // Scout the shot before flying it: on rolling forested terrain ANY fixed
-  // orbit sometimes parks a hillside crown on the sightline, and one crown at
-  // 60 m fills half the lens. March the camera→site ray at two dozen azimuths
-  // and fly the one with the most clearance over terrain and canopy.
-  const targetY = surfaceY(cx, cz) + elev * 0.35;
-  let bestAz = seed, bestMargin = -Infinity;
-  for (let k = 0; k < 24; k++) {
-    const az = seed + (k / 24) * Math.PI * 2;
-    const x0 = cx + Math.sin(az) * dist, z0 = cz + Math.cos(az) * dist;
-    const y0 = Math.max(surfaceY(x0, z0) + elev, canopyTop(x0, z0, 30) + 10);
-    let margin = Infinity;
-    for (let f = 0.08; f < 0.92; f += 0.07) {
-      const x = x0 + (cx - x0) * f, z = z0 + (cz - z0) * f;
-      const ray = y0 + (targetY - y0) * f;
-      const blocker = Math.max(surfaceY(x, z) + 2, canopyTop(x, z, 16));
-      margin = Math.min(margin, ray - blocker);
-    }
-    if (margin > bestMargin) { bestMargin = margin; bestAz = az; }
-  }
-  // Even the best lane can be blocked — a hill 50 m higher than the camera's
-  // ground puts an ordinary tree at lens height. Climb by the deficit: the
-  // target end of the ray is inside the clearing (clear by construction), so
-  // raising the camera raises the whole sightline over the blocker.
-  const elevBoost = Math.max(0, 12 - bestMargin);
+  const cx = at.x, cz = at.z;
+  const { bestAz, elevBoost, targetY } = scout(cx, cz, dist, elev, seed);
   scene.cameraDriver = (camera, dt) => {
     t += dt;
     const az = bestAz + dirSign * t * 0.02; // slow drift stays inside the scouted lane
@@ -260,6 +411,11 @@ function fireEvent(scene, dir) {
     return d.lengthSq() > 1 ? d.normalize() : fb;
   };
   switch (dir.event) {
+    case 'flock-rest':
+      // Act 4 opens on the flock riding the shallows — on the water, so the
+      // startle two cues later has a surface to erupt from.
+      A?.rest?.();
+      break;
     case 'startle-flock':
       A?.startle?.(toward(A, B), 7);
       break;
@@ -271,11 +427,21 @@ function fireEvent(scene, dir) {
       if (C && C !== B) C.rush?.(() => centreOf(B ?? C, _ec), 7);
       B?.stampede?.(toward(C ?? A, B), 7, 2.6);
       break;
+    case 'kill': {
+      // The chase's end, made real: one grazer is down where the hunter caught
+      // it, the hunter stands over the kill, and the swarm boils up out of the
+      // soil around the body — the exact chain the narrator describes.
+      const carcass = C && B && C !== B ? B.down?.(centreOf(C, _ec)) : null;
+      if (carcass) D?.swarmTo?.(carcass.pos);
+      C?.calm?.();
+      break;
+    }
     case 'swarm-rise':
       // Only an actual swarm rides a thermal. On worlds whose roster has no
       // swarm the D slot falls back to a herd — big quadrupeds must not
-      // levitate, so they surge across the ground instead.
-      if (D?.genome.role === 'swarm') D.rise?.(11);
+      // levitate, so they surge across the ground instead. The column holds
+      // long enough for the ridge crossing to fly past it without a cut.
+      if (D?.genome.role === 'swarm') D.rise?.(26);
       else D?.stampede?.(toward(C ?? B, D, 1.9), 6, 1.4);
       break;
     case 'highland-link':
@@ -289,15 +455,15 @@ function fireEvent(scene, dir) {
 }
 
 /**
- * Resolve a cue's `focus: 'speciesX'` to the live population it names — the
- * SAME role-based pick the script's cast used, so words and pictures agree.
+ * Resolve a cue's `focus: 'speciesX'` to the live population it names. The
+ * surface stage spawned the cast itself (Fauna.populate with fauna/cast.js),
+ * so this is a direct index — principal E is the cold-built highland
+ * population, not the coastal herd that shares its species name.
  */
 function filmTarget(scene, focus) {
-  if (!focus || !/^species[A-F]$/.test(focus)) return null;
-  const cast = (scene._ep2Cast ??= principalCast(scene.world.fauna ?? []));
-  const spec = cast[focus.slice(-1)];
-  if (!spec) return null;
-  return (scene.fauna?.populations ?? []).find((p) => p.genome.species === spec.species) ?? null;
+  const m = /^species([A-F])$/.exec(focus ?? '');
+  if (!m) return null;
+  return scene.fauna?.cast?.[m[1]] ?? null;
 }
 
 // --- The director ---------------------------------------------------------
