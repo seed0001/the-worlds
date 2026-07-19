@@ -10,11 +10,21 @@ const root = dirname(fileURLToPath(import.meta.url));
 // dev server synthesises each line itself against the same online service Edge
 // uses (no key needed) and streams back MP3. The Narrator falls back to the
 // browser's own voices if this endpoint fails (e.g. offline).
-const ANDREW = 'en-US-AndrewMultilingualNeural';
+// Mirrors server.js exactly (see there for why the allowlist exists), so the
+// film sounds identical in dev and deployed. Episode 1 → Andrew, Episode 2 →
+// Sonia; anything off the list falls back to Andrew.
+const VOICE_ALLOW = new Set([
+  'en-US-AndrewMultilingualNeural',
+  'en-GB-SoniaNeural',
+  'en-GB-LibbyNeural',
+  'en-IE-EmilyNeural',
+]);
+const DEFAULT_VOICE = 'en-US-AndrewMultilingualNeural';
+const pickVoice = (v) => (VOICE_ALLOW.has(v) ? v : DEFAULT_VOICE);
 
 function ttsPlugin() {
   return {
-    name: 'andrew-tts',
+    name: 'neural-tts',
     configureServer(server) {
       server.middlewares.use('/api/tts', async (req, res) => {
         const url = new URL(req.url, 'http://localhost');
@@ -24,9 +34,10 @@ function ttsPlugin() {
           res.end('missing ?text=');
           return;
         }
+        const voice = pickVoice(url.searchParams.get('voice') ?? '');
         const tts = new MsEdgeTTS();
         try {
-          await tts.setMetadata(ANDREW, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+          await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
           const { audioStream } = tts.toStream(text, { rate: '-6%' });
           res.setHeader('Content-Type', 'audio/mpeg');
           audioStream.on('data', (chunk) => res.write(chunk));
@@ -63,7 +74,9 @@ export default {
       input: {
         main: resolve(root, 'index.html'),      // the site: splash, trailer, episode
         episode1: resolve(root, 'episode1.html'), // legacy deep links, redirects to /
+        episode2: resolve(root, 'episode2.html'), // Episode 2 — the living world
         set: resolve(root, 'set.html'),          // the set browser (dev tool)
+        soup: resolve(root, 'soup.html'),        // Episode 2, Act 2 — the soup (dev set-piece)
       },
     },
   },

@@ -31,8 +31,18 @@ const els = {
   teaserCard: document.getElementById('teaser-card'),
   progress: document.getElementById('progress'),
   mute: document.getElementById('mute'),
+  ending: document.getElementById('ending'),
   replay: document.getElementById('replay'),
+  nextEp: document.getElementById('next-ep'),
+  episode2Link: document.getElementById('episode2-link'),
   loading: document.getElementById('loading'),
+};
+
+// Episode 2 lives at its own route; the link carries this seed so it opens the
+// same universe (which, if it has a living world, becomes Episode 2 — otherwise
+// the honest no-life gate).
+const gotoEpisode2 = () => {
+  location.href = 'episode2.html?' + new URLSearchParams({ seed });
 };
 
 const randomSeed = () => Math.random().toString(36).slice(2, 10);
@@ -116,7 +126,8 @@ async function buildEpisode() {
   };
   timeline.onComplete = () => {
     els.caption.classList.remove('show');
-    els.replay.hidden = false;
+    els.ending.hidden = false;
+    els.ending.classList.remove('hidden');
   };
 
   episode = { seed, cosmos, script, timeline };
@@ -171,6 +182,9 @@ els.begin.addEventListener('click', begin);
 els.replay.addEventListener('click', () => {
   location.href = location.pathname; // a fresh seed, a fresh universe
 });
+
+els.episode2Link.addEventListener('click', gotoEpisode2);
+els.nextEp.addEventListener('click', gotoEpisode2);
 
 els.mute.addEventListener('click', () => {
   const muted = !narrator.muted;

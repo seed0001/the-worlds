@@ -10,7 +10,17 @@ import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 // This mirrors the dev-server plugin in vite.config.js exactly, so the film
 // sounds identical locally and deployed.
 
-const ANDREW = 'en-US-AndrewMultilingualNeural';
+// Episode 1 narrates in Andrew (male, US-multilingual); Episode 2 in Sonia
+// (female, British). Any voice the client asks for is validated against this
+// allowlist so the endpoint can't be turned into an open TTS proxy.
+const VOICE_ALLOW = new Set([
+  'en-US-AndrewMultilingualNeural',
+  'en-GB-SoniaNeural',
+  'en-GB-LibbyNeural',
+  'en-IE-EmilyNeural',
+]);
+const DEFAULT_VOICE = 'en-US-AndrewMultilingualNeural';
+const pickVoice = (v) => (VOICE_ALLOW.has(v) ? v : DEFAULT_VOICE);
 const dist = join(dirname(fileURLToPath(import.meta.url)), 'dist');
 
 const app = express();
@@ -21,9 +31,10 @@ app.get('/api/tts', async (req, res) => {
     res.status(400).send('missing ?text=');
     return;
   }
+  const voice = pickVoice(String(req.query.voice ?? ''));
   const tts = new MsEdgeTTS();
   try {
-    await tts.setMetadata(ANDREW, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+    await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
     const { audioStream } = tts.toStream(text, { rate: '-6%' });
     res.setHeader('Content-Type', 'audio/mpeg');
     audioStream.on('data', (chunk) => res.write(chunk));

@@ -283,10 +283,57 @@ canvas { display: block; }
 #chrome button[data-muted="true"] { color: #d98a7a; }
 #progress { font-variant-numeric: tabular-nums; opacity: 0.7; }
 
-#replay {
+/* End-of-episode panel: continue to Episode 2 (primary) + new universe. */
+#ending {
   position: fixed;
   left: 50%;
-  top: 54%;
+  top: 52%;
   transform: translateX(-50%);
   z-index: 30;
+  text-align: center;
 }
+#ending[hidden] { display: none; }
+#ending:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+#next-ep {
+  padding: 13px 38px;
+  font-size: 15px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #dce8f7;
+  background: rgba(120, 175, 235, 0.12);
+  border: 1px solid rgba(150, 190, 240, 0.5);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.25s, border-color 0.25s;
+}
+#next-ep:hover { background: rgba(120, 175, 235, 0.28); border-color: rgba(190, 220, 250, 0.8); }
+#replay {
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #9fb2cc;
+  background: rgba(20, 30, 48, 0.5);
+  border: 1px solid rgba(90, 120, 160, 0.35);
+  border-radius: 3px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+#replay:hover { color: #fff; border-color: rgba(150, 190, 240, 0.6); }
+
+/* Splash: a quiet link through to Episode 2, in the seed's gold register. */
+#episode2-link {
+  margin-top: 2px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #cbb892;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(200, 175, 120, 0.25);
+  padding-bottom: 2px;
+}
+#episode2-link:hover { color: #ffe9b8; border-color: rgba(255, 220, 150, 0.5); }
