@@ -41,6 +41,24 @@ function zoneView(world, tempC) {
   };
 }
 
+/**
+ * The A–F principal cast, selected from the world's fauna by role. Exported so
+ * the director can point the camera at the exact populations the script
+ * narrates — the words and the pictures must pick the same animals.
+ */
+export function principalCast(fa) {
+  const anyGround = fa.find((f) => f.domain === 'ground') ?? fa[0];
+  const herd0 = fa.find((f) => f.role === 'herd' && f.domain === 'ground') ?? anyGround;
+  return {
+    A: fa.find((f) => f.domain === 'air') ?? fa[0],
+    B: herd0,
+    C: fa.find((f) => f.role === 'solitary') ?? anyGround,
+    D: fa.find((f) => f.role === 'swarm') ?? anyGround,
+    E: herd0,
+    F: fa.find((f) => (f.legs && f.legs !== 4) || (f.neck && f.neck >= 1.2) || f.armored) ?? herd0,
+  };
+}
+
 /** Coat clause for a cold-built principal (Allen's rule made audible). */
 function coatClause(genome) {
   if (genome.shaggy) return 'A shaggy coat, bleached toward the white of snow, seals the rest.';
@@ -68,16 +86,7 @@ export function buildEpisode2Script(cosmos, world) {
 
   // --- The principal cast, derived by role, each at its own climate --------
   const fa = world.fauna ?? [];
-  const anyGround = fa.find((f) => f.domain === 'ground') ?? fa[0];
-  const herd0 = fa.find((f) => f.role === 'herd' && f.domain === 'ground') ?? anyGround;
-  const specs = {
-    A: fa.find((f) => f.domain === 'air') ?? fa[0],
-    B: herd0,
-    C: fa.find((f) => f.role === 'solitary') ?? anyGround,
-    D: fa.find((f) => f.role === 'swarm') ?? anyGround,
-    E: herd0,
-    F: fa.find((f) => (f.legs && f.legs !== 4) || (f.neck && f.neck >= 1.2) || f.armored) ?? herd0,
-  };
+  const specs = principalCast(fa);
   const zoneTemp = { A: tempC, B: tempC, C: tempC + 22, D: tempC + 22, E: tempC - 38, F: tempC - 12 };
   const gen = {};
   for (const k of Object.keys(specs)) {
@@ -112,13 +121,13 @@ export function buildEpisode2Script(cosmos, world) {
     'So we go down. Not a cut, not a jump — one continuous fall, through the top of the air and into it, the curve of the world flattening into a horizon, the horizon flattening into ground.',
     'Down through the atmosphere, then. The same air that held the ocean from space now thickens around us, and the planet stops being a sphere and becomes a place — with a sky above it and a floor below.',
     'We drop toward it. The whole world swings up to meet the frame and keeps growing until it is no longer a world at all, just weather, then cloud, then a coastline rushing up out of the blue.',
-  ), { scene: 'surface', direct: { phase: 'descent' }, hold: 7 });
+  ), { scene: 'surface', direct: { phase: 'descent', era: 0 }, hold: 7 });
 
   say(pick(
     'And we come to rest here. Warm shallows over bare rock, at the edge where water meets stone. Nothing lives on this whole planet yet. But of every place it could begin, it begins in a pool exactly like this one.',
     'Touchdown, at the waterline. No soil, no green, no sound but the water — just warm sea running thin over naked rock. Remember this shore. This is the address where life has its first idea.',
     'Here. Where the sea goes shallow and the rock lies just beneath it, sun-warmed and mineral-stained. It looks like nothing. It is the most important place on the world, because this is where the chemistry is about to wake up.',
-  ), { scene: 'surface', direct: { phase: 'shallows' }, hold: 6 });
+  ), { scene: 'surface', direct: { phase: 'shallows', era: 0 }, hold: 6 });
 
   // === ACT 2 — THE SOUP ====================================================
   say(pick(

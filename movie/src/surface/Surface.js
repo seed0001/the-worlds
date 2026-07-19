@@ -107,6 +107,15 @@ export class Surface {
     const grass = new THREE.Color(palette.grass);
     const sand = new THREE.Color(palette.sand);
     const tmp = new THREE.Color();
+    const tmpB = new THREE.Color();
+
+    // Two palettes are baked per vertex: the LIVING ground (grass and soil,
+    // what the mesh has always shown) and the BARREN ground — the same rock
+    // before life colonised it. setLifeStage() blends between them so deep
+    // time can play across a fixed frame.
+    const living = new Float32Array(vertexCount * 3);
+    const barren = new Float32Array(vertexCount * 3);
+    const aboveSeaN = new Float32Array(vertexCount);
 
     // Sea level expressed in the same local metres the patch uses.
     const seaLevelLocal =
@@ -140,6 +149,21 @@ export class Surface {
         else tmp.copy(grass).lerp(soil, Math.min(1, Math.max(0, (aboveSea - 60) / 400)));
         tmp.lerp(rock, Math.min(1, slope * 2.6));
 
+        living[i * 3 + 0] = tmp.r;
+        living[i * 3 + 1] = tmp.g;
+        living[i * 3 + 2] = tmp.b;
+
+        // Barren twin: no grass anywhere — sand at the tide line, then bare
+        // soil fading to rock with altitude and slope.
+        if (aboveSea < 12) tmpB.copy(sand);
+        else tmpB.copy(soil).lerp(rock, Math.min(1, Math.max(0, (aboveSea - 40) / 300)));
+        tmpB.lerp(rock, Math.min(1, slope * 2.6));
+        barren[i * 3 + 0] = tmpB.r;
+        barren[i * 3 + 1] = tmpB.g;
+        barren[i * 3 + 2] = tmpB.b;
+
+        aboveSeaN[i] = Math.min(1, Math.max(0, aboveSea / 160));
+
         colors[i * 3 + 0] = tmp.r;
         colors[i * 3 + 1] = tmp.g;
         colors[i * 3 + 2] = tmp.b;
@@ -167,6 +191,10 @@ export class Surface {
     geometry.computeBoundingSphere();
 
     this.bounds = { minY, maxY, seaLevelLocal };
+    this._living = living;
+    this._barren = barren;
+    this._aboveSeaN = aboveSeaN;
+    this._lifeStage = 1;
 
     const material = new THREE.MeshStandardMaterial({
       vertexColors: true,
@@ -180,6 +208,27 @@ export class Surface {
     mesh.castShadow = false;
     mesh.name = 'surface';
     return mesh;
+  }
+
+  /**
+   * How alive the ground looks: 0 = pre-life rock and sand, 1 = full cover.
+   * Life climbs up from the waterline — low ground turns first — which is the
+   * visual the deep-time act narrates ("colour bleeding into the shallows").
+   */
+  setLifeStage(t) {
+    if (t === this._lifeStage || !this._living) return;
+    this._lifeStage = t;
+    const attr = this.mesh.geometry.attributes.color;
+    const arr = attr.array;
+    const { _living: living, _barren: barren, _aboveSeaN: a } = this;
+    for (let i = 0; i < a.length; i++) {
+      const k = Math.min(1, Math.max(0, (t * 1.3 - a[i]) * 4 + t * 0.2));
+      const j = i * 3;
+      arr[j] = barren[j] + (living[j] - barren[j]) * k;
+      arr[j + 1] = barren[j + 1] + (living[j + 1] - barren[j + 1]) * k;
+      arr[j + 2] = barren[j + 2] + (living[j + 2] - barren[j + 2]) * k;
+    }
+    attr.needsUpdate = true;
   }
 
   /**
