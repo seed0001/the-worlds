@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Water } from 'three/addons/objects/Water.js';
 import { Surface } from '../surface/Surface.js';
 import { Flora } from '../surface/Flora.js';
 import { Fauna } from '../fauna/Fauna.js';
@@ -70,6 +71,42 @@ function skyEnvironment(s) {
   const tex = new THREE.DataTexture(data, W, H, THREE.RGBAFormat);
   tex.mapping = THREE.EquirectangularReflectionMapping;
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+// A seamless, tiling water normal map generated procedurally — so the
+// three.js Water ocean has ripples without shipping a texture asset. The wave
+// components use integer wavenumbers, which makes the field wrap perfectly.
+function waterNormalsTexture(N = 256) {
+  const TAU = Math.PI * 2;
+  const height = new Float32Array(N * N);
+  const waves = [[3, 2, 1.0], [5, -3, 0.6], [2, 7, 0.5], [9, 4, 0.32], [-6, 5, 0.35]];
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      let h = 0;
+      for (const [kx, ky, a] of waves) h += a * Math.sin(TAU * (kx * x / N + ky * y / N));
+      height[y * N + x] = h;
+    }
+  }
+  const at = (x, y) => height[((y + N) % N) * N + ((x + N) % N)];
+  const data = new Uint8Array(N * N * 4);
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      const dx = at(x + 1, y) - at(x - 1, y);
+      const dy = at(x, y + 1) - at(x, y - 1);
+      let nx = -dx, ny = -dy, nz = 1.4;
+      const len = Math.hypot(nx, ny, nz) || 1;
+      nx /= len; ny /= len; nz /= len;
+      const i = (y * N + x) * 4;
+      data[i] = Math.round((nx * 0.5 + 0.5) * 255);
+      data[i + 1] = Math.round((ny * 0.5 + 0.5) * 255);
+      data[i + 2] = Math.round((nz * 0.5 + 0.5) * 255);
+      data[i + 3] = 255;
+    }
+  }
+  const tex = new THREE.DataTexture(data, N, N, THREE.RGBAFormat);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.needsUpdate = true;
   return tex;
 }
@@ -168,9 +205,32 @@ export class SurfaceScene {
     });
     this.scene.add(this.surface.mesh);
 
-    const water = this.surface.buildWater();
-    if (water) this.scene.add(water);
-    this.water = water;
+    // Water — the three.js example ocean (webgl_shaders_ocean). It renders a
+    // live reflection of the sky and terrain, so it reads as water at any angle
+    // instead of the black a plain PBR plane gives at grazing incidence. Only
+    // built when the patch actually dips below sea level.
+    const { seaLevelLocal, minY } = this.surface.bounds;
+    if (seaLevelLocal >= minY) {
+      const waterGeo = new THREE.PlaneGeometry(this.patchSize * 4, this.patchSize * 4);
+      const water = new Water(waterGeo, {
+        textureWidth: 512,
+        textureHeight: 512,
+        waterNormals: waterNormalsTexture(),
+        sunDirection: sunDir.clone(),
+        sunColor: new THREE.Color(s.sunColor).getHex(),
+        waterColor: new THREE.Color(...world.colors.color1).multiplyScalar(1.4).getHex(),
+        distortionScale: 2.4,
+        fog: this.scene.fog !== undefined,
+      });
+      water.rotation.x = -Math.PI / 2;
+      water.position.y = seaLevelLocal;
+      water.name = 'water';
+      this.water = water;
+      this.scene.add(water);
+    } else {
+      this.water = null;
+    }
+    this.seaLevelLocal = seaLevelLocal;
 
     // Vegetation
     this.flora = new Flora(world, this.surface);
@@ -200,6 +260,13 @@ export class SurfaceScene {
     if (this.cameraDriver) this.cameraDriver(this.camera, dt);
     else this.controls?.update(dt);
     this.fauna?.update(dt);
+    // Animate the ocean; the water plane rides with the camera so it always
+    // reaches the horizon on a patch that is only a few km wide.
+    if (this.water) {
+      this.water.material.uniforms['time'].value += dt;
+      this.water.position.x = this.camera.position.x;
+      this.water.position.z = this.camera.position.z;
+    }
     // Sky rides with the camera; the dome is finite and the patch is 3 km wide.
     this.sky?.position.copy(this.camera.position);
     if (this.sun) {
