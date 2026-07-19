@@ -21,9 +21,19 @@ const FETCH_GRACE = 4; // cap allowance while the MP3 is still being fetched
 const CAP_SLACK = 5; // how far past the known audio length the cap sits
 
 export class Narrator {
-  /** @param {(text: string) => void} onCaption - render a caption line */
-  constructor(onCaption) {
+  /**
+   * @param {(text: string) => void} onCaption - render a caption line
+   * @param {{ voice?: string, prefer?: RegExp }} [opts]
+   *   voice  - the /api/tts neural voice id (e.g. 'en-GB-SoniaNeural'); the
+   *            server validates it against an allowlist. Omit for Episode 1's
+   *            Andrew. `prefer` biases the browser-speech fallback toward a
+   *            matching voice (e.g. a female British one) when the endpoint is
+   *            unavailable.
+   */
+  constructor(onCaption, { voice = null, prefer = null } = {}) {
     this.onCaption = onCaption;
+    this.ttsVoice = voice; // neural voice requested from /api/tts
+    this._prefer = prefer; // fallback-voice bias
     this.synth = typeof speechSynthesis !== 'undefined' ? speechSynthesis : null;
     this.voice = null;
     this.enabled = !!this.synth;
@@ -41,12 +51,17 @@ export class Narrator {
       if (!voices.length) return;
       // Prefer Microsoft's Andrew voice; fall back to an English
       // natural/neural voice, then the first English one, then whatever exists.
+      const prefer = this._prefer;
       const score = (v) => {
         let s = 0;
-        if (/andrew/i.test(v.name)) s += 10;
+        // When a specific register is asked for (e.g. Episode 2's female British
+        // voice), bias hardest toward it; otherwise prefer Andrew.
+        if (prefer && prefer.test(v.name)) s += 12;
+        if (prefer && prefer.test(v.lang)) s += 6;
+        if (!prefer && /andrew/i.test(v.name)) s += 10;
         if (/en[-_]/i.test(v.lang)) s += 4;
         if (/natural|neural|online/i.test(v.name)) s += 3;
-        if (/^en-US/i.test(v.lang)) s += 1;
+        if (!prefer && /^en-US/i.test(v.lang)) s += 1;
         return s;
       };
       this.voice = [...voices].sort((a, b) => score(b) - score(a))[0] ?? null;
@@ -134,7 +149,9 @@ export class Narrator {
     if (this._ttsDown) return false;
     let blob;
     try {
-      const r = await fetch('/api/tts?text=' + encodeURIComponent(text));
+      const q = '/api/tts?text=' + encodeURIComponent(text) +
+        (this.ttsVoice ? '&voice=' + encodeURIComponent(this.ttsVoice) : '');
+      const r = await fetch(q);
       if (!r.ok) throw new Error(`tts endpoint: ${r.status}`);
       blob = await r.blob();
     } catch (err) {

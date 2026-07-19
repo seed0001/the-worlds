@@ -38,10 +38,11 @@ const els = {
 els.world.textContent = `${world.full ?? seed} — soup`;
 
 const stage = new Stage();
+// Episode 2 (this act included) narrates in Sonia — female, British.
 const narrator = new Narrator((text) => {
   els.caption.textContent = text;
   els.caption.classList.add('show');
-});
+}, { voice: 'en-GB-SoniaNeural', prefer: /sonia|libby|female|en-GB/i });
 
 const soup = new SoupScene(world);
 stage.register('soup', soup);
