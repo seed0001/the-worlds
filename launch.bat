@@ -61,16 +61,16 @@ start "The Worlds - server (close this window to stop)" cmd /k "npm run dev"
 echo   Waiting for the server to come up...
 timeout /t 6 /nobreak >nul
 
-echo   Opening Episode 1 in your browser...
-start "" "http://localhost:5180/episode1.html"
+echo   Opening the hub in your browser...
+start "" "http://localhost:5180/"
 
 echo.
 echo   ================================================================
-echo    Episode 1 is opening at:  http://localhost:5180/episode1.html
+echo    The hub is opening at:  http://localhost:5180/
 echo.
 echo    - Click "Begin" to start ^(browsers need a click before audio^).
 echo    - Refresh the page for a brand-new universe.
-echo    - The set browser is at:  http://localhost:5180/
+echo    - The set browser is at:  http://localhost:5180/set.html
 echo.
 echo    To STOP everything, close the "server" window that opened.
 echo   ================================================================

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Worlds</title>
+    <meta name="description" content="A documentary series generated from a single seed. Every universe — its star, its worlds, its life — computed and narrated in front of you. No two seeds tell the same story." />
+    <link rel="stylesheet" href="/src/doc/doc.css" />
+  </head>
+  <body>
+    <div id="chrome">
+      <span id="progress"></span>
+      <button id="mute" data-muted="false">mute</button>
+    </div>
+
+    <div id="caption"></div>
+    <div id="ending" class="hidden" hidden>
+      <button id="next-ep">Continue to Episode 2 &rsaquo;</button>
+      <button id="replay">New universe</button>
+    </div>
+    <button id="skip" hidden>skip trailer</button>
+
+    <div id="teaser-card" hidden>
+      <div id="teaser-card-main">THE WORLDS</div>
+      <div id="teaser-card-sub">Enter a seed. Begin yours.</div>
+    </div>
+
+    <div id="title-card">
+      <a id="hub-link" href="/">&lsaquo; all engines</a>
+      <div id="title-main">THE WORLDS</div>
+      <div id="title-sub">A documentary series generated from a single seed</div>
+
+      <p id="splash-blurb">
+        Nothing here was filmed, drawn, or written in advance. Each universe —
+        its physics, its star, its elements, its worlds, and the story the
+        narrator tells about them — is computed from one seed, live, in front
+        of you. Change the seed and everything changes: a different star,
+        different chemistry, different worlds, a different documentary.
+      </p>
+
+      <div id="seed-panel">
+        <div id="seed-row">
+          <span class="seed-label">your universe</span>
+          <span id="seed-value">…</span>
+          <button id="shuffle" title="generate a new universe">&#10227; new</button>
+        </div>
+        <div id="universe-line">&nbsp;</div>
+        <div id="seed-return">
+          <input id="seed-input" placeholder="been here before? enter your seed" spellcheck="false" autocomplete="off" />
+          <button id="seed-go">load</button>
+        </div>
+      </div>
+
+      <div id="splash-actions">
+        <button id="trailer">&#9654; watch the trailer</button>
+        <button id="begin">begin episode 1</button>
+      </div>
+
+      <a id="episode2-link">Episode 2 — The Living World &rsaquo;</a>
+
+      <div id="splash-hint">write your seed down — it is the key to your universe</div>
+    </div>
+
+    <div id="loading" hidden>generating…</div>
+
+    <script type="module" src="/src/doc/main.js"></script>
+  </body>
+</html>
