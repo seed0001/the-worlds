@@ -47,6 +47,20 @@ canvas { display: block; }
 }
 #title-card.gone { opacity: 0; pointer-events: none; }
 
+/* Back to the hub — top-left of the splash, fades out with the title card. */
+#hub-link {
+  position: absolute;
+  top: 22px;
+  left: 26px;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8a95ab;
+  text-decoration: none;
+  transition: color 0.25s ease;
+}
+#hub-link:hover { color: #e8eef7; }
+
 #splash-blurb {
   max-width: 62ch;
   text-align: center;

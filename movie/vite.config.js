@@ -72,11 +72,12 @@ export default {
     target: 'es2022', // the entry modules use top-level await
     rollupOptions: {
       input: {
-        main: resolve(root, 'index.html'),      // the site: splash, trailer, episode
-        episode1: resolve(root, 'episode1.html'), // legacy deep links, redirects to /
+        main: resolve(root, 'index.html'),       // the hub — front door, lists every engine
+        worlds: resolve(root, 'worlds.html'),     // The Worlds: splash, trailer, episodes
+        episode1: resolve(root, 'episode1.html'), // legacy deep links, redirects to /worlds.html
         episode2: resolve(root, 'episode2.html'), // Episode 2 — the living world
-        set: resolve(root, 'set.html'),          // the set browser (dev tool)
-        soup: resolve(root, 'soup.html'),        // Episode 2, Act 2 — the soup (dev set-piece)
+        set: resolve(root, 'set.html'),           // the set browser (dev tool)
+        soup: resolve(root, 'soup.html'),         // Episode 2, Act 2 — the soup (dev set-piece)
       },
     },
   },
