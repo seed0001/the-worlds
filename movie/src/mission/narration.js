@@ -1,4 +1,4 @@
-import { SATURN_V, SITE, ASCENT } from './mission.js';
+import { SATURN_V, SITE, ASCENT, TRANSLUNAR, MOON, DESCENT } from './mission.js';
 
 // The mission narration — authored, grounded, documentary voice.
 //
@@ -77,6 +77,86 @@ export function buildMissionScript() {
     `around the Earth, ${SATURN_V.parkingOrbitKm} kilometres up, moving at nearly eight ` +
     `kilometres a second. The hardest part of leaving is done. Now they aim for the Moon.`,
     { launch: 'orbit', cam: 'track' }, 9,
+  );
+
+  // === ACT 2 — TO THE MOON ==================================================
+  const spc = (text, direct = {}, hold = 7) => cues.push({ text, scene: 'space', direct, hold });
+  const moon = (text, direct = {}, hold = 7) => cues.push({ text, scene: 'moon', direct, hold });
+
+  spc(
+    `They circle the Earth once, checking the ship, and then — over the far side, ` +
+    `out of sight of home — the third stage lights a second time. This is trans-lunar ` +
+    `injection: the burn that turns a circle around the Earth into a path to the Moon.`,
+    { space: 'tli', cam: 'stack' }, 8,
+  );
+
+  spc(
+    `The burn lasts nearly ${TRANSLUNAR.tliBurnMin} minutes and lifts their speed to ` +
+    `about ${TRANSLUNAR.speedAfterTliKms} kilometres a second — just short of the speed ` +
+    `it takes to leave the Earth for good. It is enough. The planet begins, visibly, to ` +
+    `fall away behind them.`,
+    { space: 'tli', cam: 'stack' }, 8,
+  );
+
+  spc(
+    `Now a strange piece of choreography. The lander is folded inside the spent third ` +
+    `stage, and the crew ship must turn around and pull it out. The command ship ` +
+    `separates, rolls end for end, and comes back nose-first — as the four panels of ` +
+    `the shroud fall open and expose the Lunar Module waiting inside.`,
+    { space: 'transpose', cam: 'maneuver' }, 9,
+  );
+
+  spc(
+    `They dock, nose to nose, and draw the lander free. Two craft that flew up ` +
+    `stacked are now joined into one — the command ship that stays in orbit, and the ` +
+    `fragile lander that will go down to the surface. The empty stage is cast loose.`,
+    { space: 'transpose', cam: 'maneuver' }, 8,
+  );
+
+  spc(
+    `And then, for three days, they simply fall toward the Moon — engines off, ` +
+    `coasting the whole way, turning slowly to spread the sun's heat evenly across the ` +
+    `hull. Behind them the Earth shrinks to a blue marble you could hide behind your ` +
+    `thumb. Ahead, the Moon grows from a light into a world.`,
+    { space: 'coast', cam: 'coast' }, 9,
+  );
+
+  spc(
+    `Near the Moon they slip behind it and fire the engine to slow down, letting its ` +
+    `gravity capture them into orbit — ${TRANSLUNAR.lunarOrbitKm} kilometres above a ` +
+    `grey, airless, cratered ground that no one has ever stood on. From here, two of ` +
+    `the three climb into the lander.`,
+    { space: 'lunar-orbit', cam: 'moon' }, 8,
+  );
+
+  spc(
+    `The lander undocks and drops away, leaving one man alone in orbit to wait. The ` +
+    `other two fall toward ${MOON.landingSite}, firing the descent engine against their ` +
+    `speed, trading orbit for a controlled fall to the surface.`,
+    { space: 'undock', cam: 'undock' }, 8,
+  );
+
+  moon(
+    `The descent takes about ${DESCENT.durationMin} minutes. The lander pitches over ` +
+    `to bring the landing site into view, and the commander flies it down by hand over ` +
+    `a field of craters and boulders, hunting for a patch of ground smooth enough to ` +
+    `set down on.`,
+    { moon: 'descent', cam: 'descent' }, 9,
+  );
+
+  moon(
+    `The last hundred metres, slow and deliberate — and now the engine is close enough ` +
+    `to the ground to matter. There is no air, so the dust it kicks up does not billow; ` +
+    `it sheets straight out, flat and fast, across the surface in every direction.`,
+    { moon: 'landing', cam: 'landing' }, 8,
+  );
+
+  moon(
+    `Probes beneath the footpads touch first, and a light comes on in the cabin: ` +
+    `contact. The engine shuts down, and the lander settles the last inches onto its ` +
+    `legs. For the first time, a machine from Earth is standing, still and intact, on ` +
+    `the surface of another world.`,
+    { moon: 'landed', cam: 'landed' }, 9,
   );
 
   return { title: 'Apollo — The Mission', cues };

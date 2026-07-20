@@ -2,6 +2,8 @@ import { Stage } from '../core/Stage.js';
 import { Narrator } from '../doc/Narrator.js';
 import { Timeline } from '../doc/Timeline.js';
 import { LaunchScene } from './scenes/LaunchScene.js';
+import { SpaceScene } from './scenes/SpaceScene.js';
+import { MoonSurfaceScene } from './scenes/MoonSurfaceScene.js';
 import { buildMissionScript } from './narration.js';
 
 // Apollo — the mission engine's player.
@@ -28,24 +30,32 @@ const narrator = new Narrator((text) => {
 });
 
 const launch = new LaunchScene();
+const space = new SpaceScene();
+const moon = new MoonSurfaceScene();
 stage.register('launch', launch);
+stage.register('space', space);
+stage.register('moon', moon);
 const launchReady = launch.enter().catch((err) => {
   console.warn('[apollo] launch prewarm failed:', err);
 });
+// Warm the later scenes too so cuts to them don't stall on first build.
+const spaceReady = space.enter().catch((err) => console.warn('[apollo] space prewarm failed:', err));
+const moonReady = moon.enter().catch((err) => console.warn('[apollo] moon prewarm failed:', err));
+const scenes = { launch, space, moon };
+const readies = { launch: () => launchReady, space: () => spaceReady, moon: () => moonReady };
 
 const director = async (cue) => {
   await stage.activate(cue.scene);
-  if (cue.scene === 'launch') {
-    if (launchReady) await launchReady;
-    launch.beat(cue.direct ?? {});
-  }
+  const r = readies[cue.scene]?.();
+  if (r) await r;
+  scenes[cue.scene]?.beat(cue.direct ?? {});
 };
 
 const timeline = new Timeline(script, narrator, director);
 timeline.onAdvance = (i) => { els.progress.textContent = `${i + 1} / ${script.cues.length}`; };
 timeline.onComplete = () => {
   els.caption.classList.remove('show');
-  els.progress.textContent = 'orbit';
+  els.progress.textContent = 'landed';
   els.replay.hidden = false;
 };
 
@@ -61,4 +71,4 @@ els.start.addEventListener('click', async () => {
 });
 els.replay?.addEventListener('click', () => { location.href = location.pathname; });
 
-window.__apollo = { stage, narrator, timeline, script, launch, director };
+window.__apollo = { stage, narrator, timeline, script, launch, space, moon, director };
