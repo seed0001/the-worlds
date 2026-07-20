@@ -16,16 +16,44 @@ const info = await p.evaluate(() => ({ cues: window.__apollo.script.cues.length,
 const run = await p.evaluate(async () => {
   const A = window.__apollo, st = A.stage; A.narrator.muted = true;
   st._running = false; if (st._raf) cancelAnimationFrame(st._raf);
+  const gl = st.renderer.getContext();
+  const w = st.renderer.domElement.width, h = st.renderer.domElement.height;
+  const px = new Uint8Array(w * h * 4);
+  // Percentage of the frame that is a lit SURFACE (luminance > 50). This tells
+  // an empty shot (only pinprick stars -> ~0%) apart from a small lit craft on
+  // a black sky (clearly non-zero), which a mean-luminance metric conflates.
+  const litPct = () => {
+    st.composer.render();
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    let lit = 0, n = px.length / 4;
+    for (let i = 0; i < px.length; i += 4) if ((px[i] + px[i + 1] + px[i + 2]) / 3 > 50) lit++;
+    return 100 * lit / n;
+  };
   const marks = [];
   const scenes = new Set();
   for (let i = 0; i < A.script.cues.length; i++) {
     const cue = A.script.cues[i];
     try { await A.director(cue); } catch (e) { return { error: 'cue ' + i + ': ' + e.message }; }
-    for (let k = 0; k < (cue.hold ?? 6) * 60; k++) st.active.update(1 / 60);
+    // Real narration timing (muted uses the reading estimate), so this drives
+    // the rocket to the same altitudes the audience sees — where black-frame
+    // camera bugs actually surface. Sample the lit fraction at several points
+    // through the cue and keep the max: a tumbling spent stage rotates through
+    // light and shadow, so a single frame can catch its dark side even though
+    // the shot is full — only a genuinely empty shot stays near zero throughout.
+    const words = cue.text.trim().split(/\s+/).length;
+    const secs = Math.max(cue.hold ?? 6, words / 2.6 + 0.8);
+    const total = Math.floor(secs * 60);
+    let maxLit = 0;
+    for (let k = 0; k < total; k++) {
+      st.active.update(1 / 60);
+      if (k % Math.max(1, Math.floor(total / 8)) === 0 || k === total - 1) maxLit = Math.max(maxLit, litPct());
+    }
     scenes.add(st.active.constructor.name);
     const L = A.launch;
-    marks.push({ scene: cue.scene, key: cue.direct?.launch ?? cue.direct?.space ?? cue.direct?.moon,
-      alt: +L.alt.toFixed(1), lifted: L.lifted, s1c: L.staged.s1c, space: +L._space.toFixed(2) });
+    marks.push({ i, scene: cue.scene, cam: cue.direct?.cam,
+      key: cue.direct?.launch ?? cue.direct?.space ?? cue.direct?.moon,
+      alt: +L.alt.toFixed(1), lifted: L.lifted, s1c: L.staged.s1c, space: +L._space.toFixed(2),
+      lit: +maxLit.toFixed(2) });
   }
   return { marks, scenes: [...scenes], landed: A.moon.landed, lmAlt: +A.moon.lmAlt.toFixed(1) };
 });
@@ -50,6 +78,9 @@ if (run.marks) {
     if (!run.scenes.includes(s)) fail('scene never activated: ' + s);
   }
   if (!run.landed) fail('lander never touched down (lmAlt ' + run.lmAlt + ')');
+  // No cue may render an (almost) empty frame — the black-shot regression guard.
+  const dark = m.filter((x) => x.lit < 0.1);
+  if (dark.length) fail('cue(s) render near-empty: ' + dark.map((x) => `${x.i}(${x.cam}=${x.lit}% lit)`).join(', '));
 }
 if (errs.length) { console.log('ERRORS:'); errs.slice(0, 8).forEach((e) => console.log('  ' + e)); process.exit(1); }
 if (bad) process.exit(3);
