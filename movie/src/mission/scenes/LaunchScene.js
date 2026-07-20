@@ -91,6 +91,10 @@ export class LaunchScene {
     this.scene.add(this.sun, this.sun.target);
     this.fill = new THREE.HemisphereLight(0x9fc0e8, 0x3a3026, 0.6);
     this.scene.add(this.fill);
+    // A small constant ambient so a tumbling spent stage's shadowed side reads
+    // in the space close-ups instead of going pure black.
+    this.ambient = new THREE.AmbientLight(0x2a3648, 0.5);
+    this.scene.add(this.ambient);
 
     // Ground — the coastal plain around the complex.
     const ground = new THREE.Mesh(
@@ -194,6 +198,7 @@ export class LaunchScene {
       this.T += dt;
       const accel = Math.min(48, 7 + this.T * 2.4) * this.throttle;
       this.vel += accel * dt;
+      this.vel = Math.min(this.vel, 700); // bound it so coordinates stay precise
       this.alt += this.vel * dt;
       this.rocket.position.y = this.alt;
       // Pitch/roll program a few seconds after tower clear.
@@ -220,7 +225,7 @@ export class LaunchScene {
     this.stars.material.opacity = space;
     // Keep a little fill even in "space" so a tumbling spent stage isn't a pure
     // black cutout in the separation close-ups.
-    this.fill.intensity = 0.6 * (1 - space * 0.5);
+    this.fill.intensity = 0.6 * (1 - space * 0.3);
 
     // Exhaust follows the firing engine plane — which rises up the stack after
     // each separation — in world space.
@@ -236,7 +241,10 @@ export class LaunchScene {
       d.grp.position.x += Math.sin(this._t * 1.7 + d.life) * dt * 2;
       d.grp.rotation.x += d.spin * dt;
       d.grp.rotation.z += d.spin * 0.5 * dt;
-      if (d.life > 9) d.grp.visible = false;
+      // Keep spent stages alive long enough to survive both of their close-up
+      // cues (which, with narration timing, can run ~10 s each). The separation
+      // cameras follow the piece, so distance doesn't matter — visibility does.
+      if (d.life > 40) d.grp.visible = false;
     }
 
     this.sun.position.copy(this.sunDir).multiplyScalar(400).add(new THREE.Vector3(0, this.alt, 0));
@@ -297,12 +305,11 @@ export class LaunchScene {
       pos = new THREE.Vector3(r.x + 150, centreY + 20, 320);
       target.set(r.x, centreY, 0);
     }
-    // Separation cams hard-follow their (fast-moving) subject rather than easing,
-    // or a smooth-lerp would trail hundreds of metres behind a climbing rocket
-    // and turn a close-up into a distant speck. Other framings ease as before.
-    const hard = mode.startsWith('sep');
-    if (hard || mode !== this._lastCamMode) this.camera.position.copy(pos);
-    else this.camera.position.lerp(pos, Math.min(1, dt * 2.4));
+    // Hard-follow every framing: the vehicle can climb at hundreds of units a
+    // second, and any eased follow trails far below it and loses it off the top
+    // of frame (the cause of the black 'track' shots). pos is already smooth per
+    // frame, so rigid follow reads clean; cuts between cues are meant to be cuts.
+    this.camera.position.copy(pos);
     this._lastCamMode = mode;
     this.camera.lookAt(target);
   }
