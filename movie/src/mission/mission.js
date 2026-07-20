@@ -44,6 +44,22 @@ export const SITE = {
   latitude: 28.6,
 };
 
+export const TRANSLUNAR = {
+  tliBurnMin: 6,           // S-IVB second burn, ~5-6 minutes
+  speedAfterTliKms: 10.4,  // ~24,200 mph — just under Earth escape velocity
+  coastDays: 3,            // ~3 days out on a free-return trajectory
+  freeReturn: true,        // the trajectory loops the Moon and returns even if no burn
+  lunarOrbitKm: 110,       // ~60 nautical miles, circularised by the SPS engine
+};
+
+export const DESCENT = {
+  fromKm: 15,              // powered descent initiation altitude above the surface
+  durationMin: 12,         // PDI to touchdown
+  finalApproachM: 150,     // pitch-up to a near-vertical approach around here
+  touchdownSpeedMs: 1,     // a footpad contact of roughly a metre a second
+  contactProbeM: 1.7,      // probes below the pads trip the "contact light"
+};
+
 export const MOON = {
   gravityG: 1 / 6,          // 0.166 of Earth's
   distanceKm: 384_400,
