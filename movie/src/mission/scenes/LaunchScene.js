@@ -136,25 +136,47 @@ export class LaunchScene {
     this.staged[which] = true;
     const bases = this.rocket.userData.engineBases;
     // The firing engine plane jumps up to the next stage, and its plume shrinks.
-    if (which === 's1c') { this._engineLocalY = bases.afterS1c; this._flameScale = 0.45; }
+    if (which === 's1c') {
+      this._engineLocalY = bases.afterS1c; this._flameScale = 0.45;
+      // The escape tower has done its job by now — its motor yanks it up and
+      // away rather than riding to orbit. (Real jettison is ~30 s into S-II.)
+      const les = this.rocket.userData.stages.les;
+      if (les && !this._lesGone) {
+        this._lesGone = true;
+        les.matrix.copy(les.matrixWorld);
+        les.matrix.decompose(les.position, les.quaternion, les.scale);
+        this.scene.add(les);
+        this._debris.push({ grp: les, vUp: this.vel + 12, spin: 0.4, life: 0 });
+      }
+    }
     if (which === 's2') { this._engineLocalY = bases.afterS2; this._flameScale = 0.3; }
     const grp = this.rocket.userData.stages[which];
     if (!grp) return;
-    // Hand the spent stage to the world at its current world transform, then
-    // let it fall away and tumble.
+    // Hand the spent stage to the world at its current world transform.
     this.rocket.updateMatrixWorld(true);
     grp.matrix.copy(grp.matrixWorld);
     grp.matrix.decompose(grp.position, grp.quaternion, grp.scale);
     this.scene.add(grp);
-    this._debris.push({ grp, vy: -6, spin: (Math.random() - 0.5) * 0.6, life: 0 });
-    // A brief separation flash.
-    this._flash = 1;
+    // It keeps almost all of the stack's upward speed and only drifts back — a
+    // readable parting, not a plummet. The engines cut for a beat (the coast)
+    // and the next stage lights, so the two are seen to separate.
+    this._debris.push({ grp, vUp: this.vel - 5, spin: (Math.random() - 0.5) * 0.5, life: 0 });
+    this._coast = 1.6;
+    this.throttleTarget = 0;
+    // Retro-smoke at the separation plane so the split has a visible event.
+    const sepY = this.rocket.position.y + this._engineLocalY;
+    this.exhaust.burst(new THREE.Vector3(this.rocket.position.x, sepY, 0), 16);
   }
 
   update(dt) {
     if (!this.ready) return;
     this._t += dt;
-    this.throttle += (this.throttleTarget - this.throttle) * Math.min(1, dt * 1.4);
+    this.throttle += (this.throttleTarget - this.throttle) * Math.min(1, dt * 2.2);
+    // Staging coast: engines are cut for a beat, then the next stage lights.
+    if (this._coast > 0) {
+      this._coast -= dt;
+      if (this._coast <= 0) this.throttleTarget = 1;
+    }
 
     // Countdown, then flight integration once lifted.
     if (this.counting && !this.lifted) this.T += dt;
@@ -194,14 +216,16 @@ export class LaunchScene {
     const engineX = this.rocket.position.x + Math.sin(-this.tilt) * this._engineLocalY;
     this.exhaust.update(dt, this.throttle, new THREE.Vector3(engineX, engineY, 0), -3, this._flameScale);
 
-    // Spent stages fall and tumble.
+    // Spent stages carry their inherited speed and slowly fall behind, tumbling.
     for (const d of this._debris) {
-      d.life += dt; d.vy -= dt * 3;
-      d.grp.position.y += d.vy * dt;
+      d.life += dt;
+      d.vUp -= dt * 2.2; // no thrust: it slows and drops back relative to the stack
+      d.grp.position.y += d.vUp * dt;
+      d.grp.position.x += Math.sin(this._t * 1.7 + d.life) * dt * 2;
       d.grp.rotation.x += d.spin * dt;
-      if (d.life > 6) d.grp.visible = false;
+      d.grp.rotation.z += d.spin * 0.5 * dt;
+      if (d.life > 9) d.grp.visible = false;
     }
-    if (this._flash > 0) this._flash = Math.max(0, this._flash - dt * 2);
 
     this.sun.position.copy(this.sunDir).multiplyScalar(400).add(new THREE.Vector3(0, this.alt, 0));
     this.sun.target.position.set(this.rocket.position.x, this.alt, 0);
@@ -239,11 +263,11 @@ export class LaunchScene {
       pos = new THREE.Vector3(r.x + 95, centreY, 235);
       target.set(r.x, centreY, 0);
     } else if (mode === 'staging') {
-      // Hold the separation plane so the spent stage is seen to fall away below
-      // while the next stage fires above it.
+      // Close on the separation plane: the spent stage dropping just below the
+      // newly lit engine of the stage above. Tight enough to read the parting.
       const sep = r.y + this._engineLocalY;
-      pos = new THREE.Vector3(r.x + 70, sep + 20, 150);
-      target.set(r.x, sep + 6, 0);
+      pos = new THREE.Vector3(r.x + 19, sep + 3, 30);
+      target.set(r.x, sep - 4, 0);
     } else { // orbit / default: pull back, vehicle small against black sky
       pos = new THREE.Vector3(r.x + 150, centreY + 20, 320);
       target.set(r.x, centreY, 0);

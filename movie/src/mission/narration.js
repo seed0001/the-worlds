@@ -10,7 +10,9 @@ import { SATURN_V, SITE, ASCENT } from './mission.js';
 // Phase 1 covers Act 1 — the launch, pad to orbit. Acts 2–4 (translunar,
 // the moonwalk, the return) are added in later phases.
 
-const mlbf = (n) => `${(n / 4.448e6 / 1e6).toFixed(1)} million pounds`;
+// Newtons -> millions of pounds-force. 1 lbf = 4.448 N. (The earlier form
+// divided by 4.448e6 and then again by 1e6, giving ~0.0 for every value.)
+const mlbf = (n) => `${(n / 4.448 / 1e6).toFixed(1)} million pounds`;
 
 export function buildMissionScript() {
   const S = SATURN_V.stages;
@@ -20,9 +22,9 @@ export function buildMissionScript() {
   // === ACT 1 — LAUNCH =======================================================
   say(
     `${SITE.pad}, before dawn. On the pad stands the largest machine ever flown: ` +
-    `the Saturn V, ${Math.round(SATURN_V.heightM)} metres tall — a hundred and ten ` +
-    `metres of rocket, fully fuelled, holding still. In a few minutes almost all of ` +
-    `it will be gone, spent in the effort of leaving the Earth.`,
+    `the Saturn V — ${Math.round(SATURN_V.heightM)} metres tall, three hundred and ` +
+    `sixty-three feet of rocket, fully fuelled and holding still. In a few minutes ` +
+    `almost all of it will be gone, spent in the effort of leaving the Earth.`,
     { launch: 'countdown', cam: 'pad' }, 9,
   );
 
@@ -44,7 +46,7 @@ export function buildMissionScript() {
   say(
     `The stack clears the tower and rolls onto its heading, then tips over ` +
     `downrange — trading straight-up for out-to-sea, because orbit is not about ` +
-    `height so much as speed. It is already moving faster than sound.`,
+    `height so much as speed. Within a minute it will be faster than sound.`,
     { launch: 'tower-clear', cam: 'track' }, 7,
   );
 
@@ -57,17 +59,23 @@ export function buildMissionScript() {
   );
 
   say(
-    `Two and a half minutes up, the first stage is empty — its only job was to ` +
-    `throw the rest higher and faster. It falls away, and the second stage lights ` +
-    `to carry on toward space.`,
+    `Under three minutes up, the first stage is empty — its only job was to throw ` +
+    `the rest higher and faster. It falls away, and the five engines of the second ` +
+    `stage light to carry on toward space.`,
     { launch: 'staging', cam: 'staging' }, 7,
   );
 
   say(
-    `Stage by stage, the rocket sheds itself, until what is left is small and fast ` +
-    `and finally weightless — a spacecraft in orbit around the Earth, ${SATURN_V.parkingOrbitKm} ` +
-    `kilometres up, moving at eight kilometres a second. The hardest part of leaving ` +
-    `is done. Now they aim for the Moon.`,
+    `Some six minutes later the second stage is spent in turn. It drops away in the ` +
+    `black, and the third stage — the S-IVB — lights alone to push the last of the ` +
+    `stack up to orbital speed.`,
+    { launch: 'stage2', cam: 'staging' }, 7,
+  );
+
+  say(
+    `What is left is small, and fast, and finally weightless — a spacecraft in orbit ` +
+    `around the Earth, ${SATURN_V.parkingOrbitKm} kilometres up, moving at nearly eight ` +
+    `kilometres a second. The hardest part of leaving is done. Now they aim for the Moon.`,
     { launch: 'orbit', cam: 'track' }, 9,
   );
 

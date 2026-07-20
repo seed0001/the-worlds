@@ -56,6 +56,11 @@ export class Exhaust {
     s.sprite.visible = true;
   }
 
+  /** A one-off puff of smoke at `p` — retro-rocket smoke at a stage separation. */
+  burst(p, n = 14) {
+    for (let i = 0; i < n; i++) this._emit(p, 6, 2.2);
+  }
+
   /**
    * @param {number} dt
    * @param {number} throttle 0..1 engine output
