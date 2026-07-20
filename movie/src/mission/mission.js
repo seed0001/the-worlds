@@ -62,9 +62,10 @@ export const LM = {
 
 export const ROVER = {
   name: 'Lunar Roving Vehicle',
-  topSpeedKmh: 13,          // ~8 mph downhill record on Apollo 17
-  massKg: 210,
-  rangeKm: 92,              // total driven, Apollo 17
+  topSpeedKmh: 13,          // design top speed ~8 mph; Cernan hit ~18 km/h downhill on 17
+  massKg: 210,              // ~463 lb empty
+  designRangeKm: 92,        // vehicle's max design range; Apollo 17 actually drove ~36 km
+  farthestFromLmKm: 7.6,    // Apollo 17 — the walk-back limit that capped every traverse
   wheels: 4,
 };
 
