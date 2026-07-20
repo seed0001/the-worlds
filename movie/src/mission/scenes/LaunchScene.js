@@ -3,6 +3,8 @@ import { buildSaturnV } from '../models/saturnV.js';
 import { buildPad } from '../models/pad.js';
 import { Exhaust } from '../models/exhaust.js';
 
+const _vc = new THREE.Vector3(); // scratch for separation-camera aim
+
 // Launch — the pad, the countdown, and the ride to staging.
 //
 // The vehicle stays near the world origin; altitude is conveyed by the pad
@@ -160,8 +162,16 @@ export class LaunchScene {
     // It keeps almost all of the stack's upward speed and only drifts back — a
     // readable parting, not a plummet. The engines cut for a beat (the coast)
     // and the next stage lights, so the two are seen to separate.
-    this._debris.push({ grp, vUp: this.vel - 5, spin: (Math.random() - 0.5) * 0.5, life: 0 });
-    this._coast = 1.6;
+    // Slow drift and a long coast keep the two pieces close and drifting for the
+    // whole separation sequence, so the close-up angles have something to hold.
+    // `vc` is the stage's visual centre above its group origin (the origin sits
+    // at the old first-stage base, so upper stages need a big offset) — the
+    // separation cameras aim there.
+    const vc = which === 's1c' ? 25 : which === 's2' ? 64 : 20;
+    const deb = { grp, vUp: this.vel - 3, spin: (Math.random() - 0.5) * 0.5, life: 0, vc };
+    this._debris.push(deb);
+    this._lastDebris = deb; // the spent stage the separation cameras frame
+    this._coast = 3.6;
     this.throttleTarget = 0;
     // Retro-smoke at the separation plane so the split has a visible event.
     const sepY = this.rocket.position.y + this._engineLocalY;
@@ -208,7 +218,9 @@ export class LaunchScene {
     u.horizon.value.copy(DAWN_HZ).lerp(DAY_HZ, day).lerp(SPACE_HZ, space);
     u.space.value = space;
     this.stars.material.opacity = space;
-    this.fill.intensity = 0.6 * (1 - space * 0.7);
+    // Keep a little fill even in "space" so a tumbling spent stage isn't a pure
+    // black cutout in the separation close-ups.
+    this.fill.intensity = 0.6 * (1 - space * 0.5);
 
     // Exhaust follows the firing engine plane — which rises up the stack after
     // each separation — in world space.
@@ -262,20 +274,36 @@ export class LaunchScene {
       // Long lens holding the whole climbing vehicle against the sky.
       pos = new THREE.Vector3(r.x + 95, centreY, 235);
       target.set(r.x, centreY, 0);
-    } else if (mode === 'staging') {
-      // Close on the separation plane: the spent stage dropping just below the
-      // newly lit engine of the stage above. Tight enough to read the parting.
-      const sep = r.y + this._engineLocalY;
-      pos = new THREE.Vector3(r.x + 19, sep + 3, 30);
-      target.set(r.x, sep - 4, 0);
+    } else if (mode.startsWith('sep') || mode === 'staging') {
+      // All three separation angles frame the spent stage itself (the thing that
+      // is separating), each from a different offset, with the live vehicle's
+      // flame above it. sep-plane and sep-plane-b are opposing side views;
+      // sep-fall rides in close as it tumbles away.
+      const deb = this._lastDebris;
+      const dp = deb?.grp?.position;
+      // The centre offset is along the stage's own (tilted, tumbling) axis, so
+      // rotate it by the group's orientation before adding — a vertical-only
+      // offset lands off to the side once the stack has pitched over.
+      let cx, cy, cz;
+      if (dp) {
+        _vc.set(0, deb.vc, 0).applyQuaternion(deb.grp.quaternion);
+        cx = dp.x + _vc.x; cy = dp.y + _vc.y; cz = dp.z + _vc.z;
+      } else { cx = r.x; cy = r.y + this._engineLocalY - 12; cz = 0; }
+      if (mode === 'sep-plane-b') pos = new THREE.Vector3(cx - 22, cy + 10, -34);
+      else if (mode === 'sep-fall') pos = new THREE.Vector3(cx + 16, cy + 7, 26);
+      else pos = new THREE.Vector3(cx + 24, cy + 12, 36);
+      target.set(cx, cy + 2, cz);
     } else { // orbit / default: pull back, vehicle small against black sky
       pos = new THREE.Vector3(r.x + 150, centreY + 20, 320);
       target.set(r.x, centreY, 0);
     }
-    // Snap on a hard cut between framings, then ease; keeps beats crisp without
-    // the camera sailing across the whole sky between cues.
-    if (mode !== this._lastCamMode) { this.camera.position.copy(pos); this._lastCamMode = mode; }
+    // Separation cams hard-follow their (fast-moving) subject rather than easing,
+    // or a smooth-lerp would trail hundreds of metres behind a climbing rocket
+    // and turn a close-up into a distant speck. Other framings ease as before.
+    const hard = mode.startsWith('sep');
+    if (hard || mode !== this._lastCamMode) this.camera.position.copy(pos);
     else this.camera.position.lerp(pos, Math.min(1, dt * 2.4));
+    this._lastCamMode = mode;
     this.camera.lookAt(target);
   }
 

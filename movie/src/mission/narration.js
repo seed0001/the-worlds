@@ -60,16 +60,24 @@ export function buildMissionScript() {
 
   say(
     `Under three minutes up, the first stage is empty — its only job was to throw ` +
-    `the rest higher and faster. It falls away, and the five engines of the second ` +
-    `stage light to carry on toward space.`,
-    { launch: 'staging', cam: 'staging' }, 7,
+    `the rest higher and faster. It lets go.`,
+    { launch: 'staging', cam: 'sep-plane' }, 5,
+  );
+  say(
+    `It falls back, tumbling, toward the sea it rose beside — and in the same breath, ` +
+    `just above it, the five engines of the second stage light and drive on.`,
+    { cam: 'sep-fall' }, 6,
   );
 
   say(
-    `Some six minutes later the second stage is spent in turn. It drops away in the ` +
-    `black, and the third stage — the S-IVB — lights alone to push the last of the ` +
-    `stack up to orbital speed.`,
-    { launch: 'stage2', cam: 'staging' }, 7,
+    `Six minutes later, the same parting again: the second stage is spent, and ` +
+    `releases.`,
+    { launch: 'stage2', cam: 'sep-plane-b' }, 5,
+  );
+  say(
+    `It drops behind into the black; above it the third stage — the S-IVB — lights ` +
+    `alone to push the last of the stack up to orbital speed.`,
+    { cam: 'sep-fall' }, 6,
   );
 
   say(
@@ -109,8 +117,14 @@ export function buildMissionScript() {
   spc(
     `They dock, nose to nose, and draw the lander free. Two craft that flew up ` +
     `stacked are now joined into one — the command ship that stays in orbit, and the ` +
-    `fragile lander that will go down to the surface. The empty stage is cast loose.`,
+    `fragile lander that will go down to the surface.`,
     { space: 'transpose', cam: 'maneuver' }, 8,
+  );
+
+  spc(
+    `And the empty third stage, its job done, is set loose — cast off to drift away ` +
+    `on its own and swing past the Moon, lost. The joined ship turns, and flies on.`,
+    { space: 'castoff', cam: 'castoff' }, 7,
   );
 
   spc(
@@ -130,9 +144,15 @@ export function buildMissionScript() {
   );
 
   spc(
-    `The lander undocks and drops away, leaving one man alone in orbit to wait. The ` +
-    `other two fall toward ${MOON.landingSite}, firing the descent engine against their ` +
-    `speed, trading orbit for a controlled fall to the surface.`,
+    `The lander undocks. Springs push it gently clear of the command ship, and for ` +
+    `the first time it flies on its own — a spidery craft built only for vacuum, that ` +
+    `could never survive air or gravity back home.`,
+    { space: 'undock', cam: 'undock-close' }, 7,
+  );
+  spc(
+    `One man stays behind, alone, to keep the command ship in orbit. The other two ` +
+    `fall toward ${MOON.landingSite}, firing the descent engine against their speed, ` +
+    `trading orbit for a controlled fall to the surface.`,
     { space: 'undock', cam: 'undock' }, 8,
   );
 
