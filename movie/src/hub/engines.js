@@ -36,22 +36,20 @@ export const ENGINES = [
     year: 'Series I',
   },
 
-  // ---- Templates for the next engines. Flip status to 'live' and set href ----
-  // when the engine has a launch page. Rename freely — these are placeholders
-  // so the grid reads as a hub, not a promise.
   {
-    id: 'engine-2',
-    title: 'Untitled Engine',
-    tagline: 'Your next generative film.',
+    id: 'apollo',
+    title: 'Apollo',
+    tagline: 'The whole Moon landing, recreated.',
     blurb:
-      'A slot on the shelf. Point it at a new scene engine — a different subject, ' +
-      'a different set of rules — and it plays here beside The Worlds, generated ' +
-      'live from its own seed.',
-    href: null,
-    status: 'soon',
-    accent: '#8b7bd8',
-    tags: ['procedural'],
-    year: 'Series II',
+      'The Saturn V on the pad before dawn, the countdown, the ride to orbit — ' +
+      'then the coast to the Moon, the landing, the first steps and the rover, and ' +
+      'the long fall home to a splashdown. Not generated from a seed but recreated ' +
+      'from history, every figure true to the hardware that flew.',
+    href: 'apollo.html',
+    status: 'live',
+    accent: '#d8894f',
+    tags: ['recreation', 'narrated', 'grounded'],
+    year: 'Program I',
   },
   {
     id: 'engine-3',
