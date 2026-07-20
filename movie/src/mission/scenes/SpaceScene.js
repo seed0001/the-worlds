@@ -23,6 +23,7 @@ const BODY = {
   orbit:    { earth: [0, -175, 40, 150], moon: [1200, 400, -6000, 120] },
   tli:      { earth: [40, -190, -60, 150], moon: [1000, 350, -5000, 120] },
   transpose:{ earth: [80, -200, -120, 150], moon: [900, 320, -4200, 120] },
+  castoff:  { earth: [120, -210, -160, 150], moon: [860, 300, -4000, 120] },
   coast:    { earth: [220, 130, 1900, 150], moon: [-30, -10, -430, 120] },
   'lunar-orbit': { earth: [-520, 260, 3400, 150], moon: [0, -30, -240, 150] },
   undock:   { earth: [-520, 260, 3400, 150], moon: [0, -30, -240, 150] },
@@ -127,10 +128,15 @@ export class SpaceScene {
       return;
     }
 
-    // Coast / lunar orbit / undock: the docked pair — CSM nose-down, docked to
-    // the LM's top hatch — in the slow "barbecue roll" about the vertical axis
-    // that spread the sun's heat evenly on the real coast.
-    this.sivb.visible = false;
+    // Castoff / coast / lunar orbit / undock: the docked pair — CSM nose-down,
+    // docked to the LM's top hatch — in the slow "barbecue roll" about the
+    // vertical axis that spread the sun's heat evenly on the real coast. On the
+    // castoff beat the spent S-IVB is kept in view, drifting away below.
+    this.sivb.visible = ph === 'castoff';
+    if (ph === 'castoff') {
+      this.sivb.userData.setOpen(1);
+      this.sivb.position.set(0, -26 - this.bt * 7, -this.bt * 3);
+    }
     const roll = this._t * 0.2;
     const qDown = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
     const qRoll = new THREE.Quaternion().setFromAxisAngle(_yv, roll);
@@ -165,9 +171,14 @@ export class SpaceScene {
     let pos, target = new THREE.Vector3(0, 1, 0);
     if (c === 'stack') { pos = new THREE.Vector3(20, 6, 30); target.set(0, 3, 0); }
     else if (c === 'maneuver') { pos = new THREE.Vector3(16, 5, 24); target.set(0, 3, 0); }
+    else if (c === 'castoff') { pos = new THREE.Vector3(13, -2, 30); target.set(0, -10, 0); }
     else if (c === 'coast') { pos = new THREE.Vector3(6, 7, 34); target.set(0, 3, 0); }
     else if (c === 'moon') { pos = new THREE.Vector3(15, 6, 30); target.set(0, 2, 0); }
-    else if (c === 'undock') {
+    else if (c === 'undock-close') {
+      // Tight on the lander as it drops from the command ship just above it.
+      const lp = this.lm.position;
+      pos = new THREE.Vector3(7, lp.y + 4, 13); target.copy(lp);
+    } else if (c === 'undock') {
       pos = new THREE.Vector3(14, 6, 26);
       target.copy(this.lm.position).lerp(new THREE.Vector3(0, -2, 0), 0.4);
     } else pos = new THREE.Vector3(20, 8, 32);
