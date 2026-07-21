@@ -1,4 +1,4 @@
-import { SATURN_V, SITE, ASCENT, TRANSLUNAR, MOON, DESCENT } from './mission.js';
+import { SATURN_V, SITE, ASCENT, TRANSLUNAR, MOON, DESCENT, ROVER, CREW } from './mission.js';
 
 // The mission narration — authored, grounded, documentary voice.
 //
@@ -7,8 +7,9 @@ import { SATURN_V, SITE, ASCENT, TRANSLUNAR, MOON, DESCENT } from './mission.js'
 // `direct.launch` moves the launch scene's state machine (countdown, ignite,
 // liftoff, staging); `direct.cam` picks the framing.
 //
-// Phase 1 covers Act 1 — the launch, pad to orbit. Acts 2–4 (translunar,
-// the moonwalk, the return) are added in later phases.
+// Acts 1–3 are built — the launch (pad to orbit), the coast to the Moon and
+// the landing, and the moonwalk with the rover. Act 4 (the return) is added in
+// a later phase.
 
 // Newtons -> millions of pounds-force. 1 lbf = 4.448 N. (The earlier form
 // divided by 4.448e6 and then again by 1e6, giving ~0.0 for every value.)
@@ -177,6 +178,49 @@ export function buildMissionScript() {
     `legs. For the first time, a machine from Earth is standing, still and intact, on ` +
     `the surface of another world.`,
     { moon: 'landed', cam: 'landed' }, 9,
+  );
+
+  // === ACT 3 — THE MOONWALK =================================================
+  moon(
+    `They let the cabin's air out into the vacuum, open the hatch, and back out onto ` +
+    `the ladder. Down the rungs, slowly — and a boot presses into the grey dust that ` +
+    `no foot has ever touched. Here a man weighs a sixth of what he does at home; ` +
+    `${CREW.toSurface} of the ${CREW.total} are on the surface now, the third still ` +
+    `overhead in the command ship.`,
+    { moon: 'egress', cam: 'egress' }, 9,
+  );
+
+  moon(
+    `They set a flag. There is no wind to fly it, so a rod along its top edge holds it ` +
+    `out, and it stands there stiff and still — the only bright colour for a quarter of ` +
+    `a million miles. Above it, small and blue and unmoving in the black, hangs the ` +
+    `Earth, with everyone who has ever lived but these three on it.`,
+    { moon: 'flag', cam: 'flag' }, 9,
+  );
+
+  moon(
+    `From a bay in the lander's side they unfold a car. The ${ROVER.name} rides on ` +
+    `${ROVER.wheels} wire-mesh wheels and weighs barely ${ROVER.massKg} kilograms — a ` +
+    `frame of tubing and a dish antenna, built to be driven across ground no road ever ` +
+    `crossed. It lowers on its cables, drops onto its wheels, and is ready.`,
+    { moon: 'rover', cam: 'rover' }, 9,
+  );
+
+  moon(
+    `And then they drive. With no air to slow it, the dust the wheels throw does not ` +
+    `hang — it arcs up in long flat rooster-tails and falls straight back, printing two ` +
+    `clean tracks that will not blur for a thousand years. Its top speed is barely ` +
+    `${ROVER.topSpeedKmh} kilometres an hour, a brisk walk, and it feels like flying.`,
+    { moon: 'drive', cam: 'drive' }, 9,
+  );
+
+  moon(
+    `They never go far. Everything is measured against a single hard rule: never drive ` +
+    `farther than you could walk back if the rover died — about ` +
+    `${ROVER.farthestFromLmKm} kilometres, out here where there is no help and the air ` +
+    `is what you carry. So they range out, and gather what they can, and turn for the ` +
+    `lander — a bright machine and two small figures, the only moving things on the Moon.`,
+    { moon: 'survey', cam: 'survey' }, 10,
   );
 
   return { title: 'Apollo — The Mission', cues };

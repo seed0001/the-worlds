@@ -4,7 +4,7 @@ import * as THREE from 'three';
 // engine sprays outward nearly flat and fast, and drops straight back — no
 // billowing cloud. Modelled as low, radial streaks that fade as they travel.
 
-const COUNT = 120;
+const COUNT = 200;
 
 export class MoonDust {
   constructor() {
@@ -18,7 +18,7 @@ export class MoonDust {
       }));
       s.visible = false;
       this.group.add(s);
-      this.parts.push({ sprite: s, life: 0, max: 1, vx: 0, vz: 0, vy: 0, x: 0, y: 0, z: 0 });
+      this.parts.push({ sprite: s, life: 0, max: 1, vx: 0, vz: 0, vy: 0, x: 0, y: 0, z: 0, sz: 1 });
     }
     this._next = 0;
   }
@@ -34,7 +34,32 @@ export class MoonDust {
       p.x = cx + Math.cos(a) * 1.5; p.z = cz + Math.sin(a) * 1.5; p.y = groundY + 0.2;
       p.vx = Math.cos(a) * speed; p.vz = Math.sin(a) * speed;
       p.vy = 1 + Math.random() * 3; // a low arc; gravity pulls it back
-      p.life = 0; p.max = 1.4 + Math.random() * 1.2;
+      p.life = 0; p.max = 1.4 + Math.random() * 1.2; p.sz = 1;
+      p.sprite.visible = true;
+    }
+  }
+
+  /**
+   * Rooster-tail off a wheel travelling along (dirx,dirz). Dust flies up and
+   * backward — against the direction of travel — in a fan, then falls straight
+   * back with no air to hold it: the flat, sheeting fantail the LRV threw on
+   * every drive. (cx,cz) is the wheel contact, groundY the surface, strength
+   * scales with speed.
+   */
+  spray(cx, cz, groundY, dirx, dirz, strength) {
+    const back = Math.atan2(-dirz, -dirx);      // opposite the travel heading
+    const n = Math.max(1, Math.floor(strength * 9));
+    for (let i = 0; i < n; i++) {
+      const p = this.parts[this._next];
+      this._next = (this._next + 1) % this.parts.length;
+      const a = back + (Math.random() - 0.5) * 1.5;   // ~85° fan behind the wheel
+      const speed = 9 + Math.random() * 18 * strength;
+      p.x = cx; p.z = cz; p.y = groundY + 0.12;
+      p.vx = Math.cos(a) * speed; p.vz = Math.sin(a) * speed;
+      // Low and fast: thrown just clear of the ground so it sheets rather than
+      // billows, and many small grains rather than a few big puffs.
+      p.vy = 1.2 + Math.random() * 2.6;
+      p.life = 0; p.max = 0.7 + Math.random() * 0.7; p.sz = 0.4;
       p.sprite.visible = true;
     }
   }
@@ -49,7 +74,7 @@ export class MoonDust {
       p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
       if (p.y < groundY + 0.1) { p.y = groundY + 0.1; p.vy = 0; p.vx *= 0.6; p.vz *= 0.6; }
       p.sprite.position.set(p.x, p.y, p.z);
-      const sc = 1.4 + k * 3;
+      const sc = (1.4 + k * 3) * p.sz;
       p.sprite.scale.set(sc, sc, 1);
       p.sprite.material.opacity = Math.sin(k * Math.PI) * 0.5;
     }

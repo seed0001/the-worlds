@@ -55,13 +55,16 @@ const run = await p.evaluate(async () => {
       alt: +L.alt.toFixed(1), lifted: L.lifted, s1c: L.staged.s1c, space: +L._space.toFixed(2),
       lit: +maxLit.toFixed(2) });
   }
-  return { marks, scenes: [...scenes], landed: A.moon.landed, lmAlt: +A.moon.lmAlt.toFixed(1) };
+  const M = A.moon;
+  return { marks, scenes: [...scenes], landed: M.landed, lmAlt: +M.lmAlt.toFixed(1),
+    crewOut: M.crewOut, flagUp: M.flagUp, roverDeployed: M.roverDeployed, roverDist: +M.roverDist.toFixed(1) };
 });
 
 await b.close();
 console.log('script:', JSON.stringify(info));
 console.log('marks:', JSON.stringify(run.marks ?? run));
 console.log('scenes:', JSON.stringify(run.scenes), 'landed:', run.landed, 'lmAlt:', run.lmAlt);
+console.log('eva:', JSON.stringify({ crewOut: run.crewOut, flagUp: run.flagUp, roverDeployed: run.roverDeployed, roverDist: run.roverDist }));
 let bad = false;
 const fail = (m) => { console.error('FAIL:', m); bad = true; };
 if (run.error) fail(run.error);
@@ -78,10 +81,16 @@ if (run.marks) {
     if (!run.scenes.includes(s)) fail('scene never activated: ' + s);
   }
   if (!run.landed) fail('lander never touched down (lmAlt ' + run.lmAlt + ')');
+  // Act 3 — the moonwalk must actually play out on the surface.
+  if (!run.crewOut) fail('crew never egressed onto the surface');
+  if (!run.flagUp) fail('flag never planted');
+  if (!run.roverDeployed) fail('rover never deployed from the lander');
+  if (!(run.roverDist > 10)) fail('rover never drove across the surface (dist ' + run.roverDist + ' m)');
   // No cue may render an (almost) empty frame — the black-shot regression guard.
   const dark = m.filter((x) => x.lit < 0.1);
   if (dark.length) fail('cue(s) render near-empty: ' + dark.map((x) => `${x.i}(${x.cam}=${x.lit}% lit)`).join(', '));
 }
 if (errs.length) { console.log('ERRORS:'); errs.slice(0, 8).forEach((e) => console.log('  ' + e)); process.exit(1); }
 if (bad) process.exit(3);
-console.log('OK: full mission staged — launch to orbit, coast + docking, descent to touchdown on the Moon.');
+console.log('OK: full mission staged — launch to orbit, coast + docking, descent to touchdown, ' +
+  'and the moonwalk: crew out, flag up, rover deployed and driven ' + run.roverDist + ' m.');
