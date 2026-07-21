@@ -4,6 +4,7 @@ import { Timeline } from '../doc/Timeline.js';
 import { LaunchScene } from './scenes/LaunchScene.js';
 import { SpaceScene } from './scenes/SpaceScene.js';
 import { MoonSurfaceScene } from './scenes/MoonSurfaceScene.js';
+import { EarthReturnScene } from './scenes/EarthReturnScene.js';
 import { buildMissionScript } from './narration.js';
 
 // Apollo — the mission engine's player.
@@ -32,17 +33,20 @@ const narrator = new Narrator((text) => {
 const launch = new LaunchScene();
 const space = new SpaceScene();
 const moon = new MoonSurfaceScene();
+const earth = new EarthReturnScene();
 stage.register('launch', launch);
 stage.register('space', space);
 stage.register('moon', moon);
+stage.register('return', earth);
 const launchReady = launch.enter().catch((err) => {
   console.warn('[apollo] launch prewarm failed:', err);
 });
 // Warm the later scenes too so cuts to them don't stall on first build.
 const spaceReady = space.enter().catch((err) => console.warn('[apollo] space prewarm failed:', err));
 const moonReady = moon.enter().catch((err) => console.warn('[apollo] moon prewarm failed:', err));
-const scenes = { launch, space, moon };
-const readies = { launch: () => launchReady, space: () => spaceReady, moon: () => moonReady };
+const earthReady = earth.enter().catch((err) => console.warn('[apollo] return prewarm failed:', err));
+const scenes = { launch, space, moon, return: earth };
+const readies = { launch: () => launchReady, space: () => spaceReady, moon: () => moonReady, return: () => earthReady };
 
 const director = async (cue) => {
   await stage.activate(cue.scene);
@@ -55,7 +59,7 @@ const timeline = new Timeline(script, narrator, director);
 timeline.onAdvance = (i) => { els.progress.textContent = `${i + 1} / ${script.cues.length}`; };
 timeline.onComplete = () => {
   els.caption.classList.remove('show');
-  els.progress.textContent = 'landed';
+  els.progress.textContent = 'home';
   els.replay.hidden = false;
 };
 
@@ -71,4 +75,4 @@ els.start.addEventListener('click', async () => {
 });
 els.replay?.addEventListener('click', () => { location.href = location.pathname; });
 
-window.__apollo = { stage, narrator, timeline, script, launch, space, moon, director };
+window.__apollo = { stage, narrator, timeline, script, launch, space, moon, earth, director };

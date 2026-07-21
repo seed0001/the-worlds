@@ -71,6 +71,20 @@ export class MoonSurfaceScene {
     this.lm = buildLM();
     this.scene.add(this.lm);
     this._addLadder();
+    // The ascent stage flies home; the descent stage stays as its launch pad.
+    this.ascentStage = this.lm.userData.ascentStage;
+    this.descentStage = this.lm.userData.descentStage;
+    this.ascentAlt = 0;
+    this.liftedOff = false;
+    // Ascent-engine flame, hidden until the Moon liftoff.
+    this.ascentFlame = new THREE.Mesh(
+      new THREE.ConeGeometry(0.5, 3.4, 14, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0xfff0c8, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }),
+    );
+    this.ascentFlame.rotation.x = Math.PI;
+    this.ascentFlame.position.y = -1.7;
+    this.ascentFlame.visible = false;
+    this.ascentStage.add(this.ascentFlame);
 
     // Descent-engine flame (additive cone under the bell).
     this.flame = new THREE.Mesh(
@@ -180,6 +194,11 @@ export class MoonSurfaceScene {
       this.crew[1].userData.target = null;
       this.seated = true;
       this.roverPos = new THREE.Vector3(this.rover.position.x, 0, this.rover.position.z);
+    } else if (dir.moon === 'liftoff') {
+      // The crew are back inside the ascent stage; the rover and flag stay.
+      this.seated = false;
+      for (const a of this.crew) a.visible = false;
+      this.liftedOff = true;
     }
   }
 
@@ -216,6 +235,7 @@ export class MoonSurfaceScene {
     }
 
     this._updateEva(dt);
+    if (this.phase === 'liftoff') this._updateLiftoff(dt);
     this.dust.update(dt, this.siteY);
     this.sun.target.position.set(SITE.x, this.siteY, SITE.z);
     this._driveCamera(dt);
@@ -298,6 +318,19 @@ export class MoonSurfaceScene {
     }
   }
 
+  _updateLiftoff(dt) {
+    const t = this.bt;
+    // A held moment of engine, a flash of dust off the descent stage, then the
+    // ascent stage cuts loose and climbs, accelerating away.
+    this.ascentFlame.visible = true;
+    const flick = 0.85 + Math.random() * 0.3;
+    this.ascentFlame.scale.set(flick, flick, flick);
+    if (t < 1.6) this.dust.blast(0, 0, this.siteY, 1);
+    // Accelerating climb, capped once it is well out of frame.
+    if (t > 0.6) this.ascentAlt = Math.min(400, this.ascentAlt + (2.4 + this.ascentAlt * 0.8) * dt);
+    this.ascentStage.position.y = 4.0 + this.ascentAlt;
+  }
+
   _layTracks(fwd) {
     const p = this.rover.position;
     if (this._lastTrack && p.distanceTo(this._lastTrack) < 0.8) return;
@@ -351,6 +384,11 @@ export class MoonSurfaceScene {
       pos = new THREE.Vector3(
         r.x + back.x * 10 + side.x * 5, this.siteY + 4.5, r.z + back.z * 10 + side.z * 5);
       target = new THREE.Vector3(r.x, r.y + 1.2, r.z);
+    } else if (c === 'liftoff') {
+      // Low and back, so the descent stage, flag and rover stay in frame while
+      // the ascent stage climbs up and out the top — what's left behind.
+      pos = new THREE.Vector3(7, this.siteY + 3.5, 19);
+      target = new THREE.Vector3(-0.5, this.siteY + 3 + Math.min(this.ascentAlt * 0.5, 6), 1);
     } else { // survey — pull back and hold the whole site
       const r = this.rover.position;
       pos = new THREE.Vector3(r.x + 16, this.siteY + 12, r.z + 20);

@@ -1,4 +1,4 @@
-import { SATURN_V, SITE, ASCENT, TRANSLUNAR, MOON, DESCENT, ROVER, CREW } from './mission.js';
+import { SATURN_V, SITE, ASCENT, TRANSLUNAR, MOON, DESCENT, ROVER, CREW, LM, RETURN } from './mission.js';
 
 // The mission narration — authored, grounded, documentary voice.
 //
@@ -7,9 +7,9 @@ import { SATURN_V, SITE, ASCENT, TRANSLUNAR, MOON, DESCENT, ROVER, CREW } from '
 // `direct.launch` moves the launch scene's state machine (countdown, ignite,
 // liftoff, staging); `direct.cam` picks the framing.
 //
-// Acts 1–3 are built — the launch (pad to orbit), the coast to the Moon and
-// the landing, and the moonwalk with the rover. Act 4 (the return) is added in
-// a later phase.
+// The whole mission is here — Act 1 the launch (pad to orbit), Act 2 the coast
+// to the Moon and the landing, Act 3 the moonwalk with the rover, and Act 4 the
+// return: lunar liftoff, the trans-Earth burn, re-entry, and splashdown.
 
 // Newtons -> millions of pounds-force. 1 lbf = 4.448 N. (The earlier form
 // divided by 4.448e6 and then again by 1e6, giving ~0.0 for every value.)
@@ -91,6 +91,7 @@ export function buildMissionScript() {
   // === ACT 2 — TO THE MOON ==================================================
   const spc = (text, direct = {}, hold = 7) => cues.push({ text, scene: 'space', direct, hold });
   const moon = (text, direct = {}, hold = 7) => cues.push({ text, scene: 'moon', direct, hold });
+  const ret = (text, direct = {}, hold = 7) => cues.push({ text, scene: 'return', direct, hold });
 
   spc(
     `They circle the Earth once, checking the ship, and then — over the far side, ` +
@@ -221,6 +222,78 @@ export function buildMissionScript() {
     `is what you carry. So they range out, and gather what they can, and turn for the ` +
     `lander — a bright machine and two small figures, the only moving things on the Moon.`,
     { moon: 'survey', cam: 'survey' }, 10,
+  );
+
+  // === ACT 4 — THE RETURN ===================================================
+  moon(
+    `When their time is up, they leave almost everything. Only the top half of the ` +
+    `lander flies — it lights its engine and rises off the lower half, which stays ` +
+    `behind and becomes its launch pad. In a moment the surface is still again: the ` +
+    `descent stage, the flag, the rover, and two sets of footprints, left to the ` +
+    `silence for as long as the Moon lasts.`,
+    { moon: 'liftoff', cam: 'liftoff' }, 10,
+  );
+
+  spc(
+    `The ${LM.name}'s ascent stage climbs back to the command ship, still circling ` +
+    `where they left it with the third of the crew aboard. It closes the last few ` +
+    `metres carefully, and docks — and the two who walked on the Moon float back ` +
+    `through the tunnel into the ship that will take them home.`,
+    { space: 'rendezvous', cam: 'rendezvous' }, 9,
+  );
+
+  spc(
+    `Its work done, the lander is let go. The little craft that carried them down and ` +
+    `up again is cast loose in lunar orbit and left behind — there is no room to bring ` +
+    `it home, and no reason to.`,
+    { space: 'jettison', cam: 'jettison' }, 8,
+  );
+
+  spc(
+    `Then, on the far side of the Moon, out of contact, the main engine fires one more ` +
+    `time — trans-Earth injection, the burn that lets go of the Moon's gravity and ` +
+    `aims the ship at the small blue point it came from.`,
+    { space: 'tei', cam: 'tei' }, 8,
+  );
+
+  spc(
+    `And then the long fall home. For three more days they coast back across the same ` +
+    `emptiness, and the Earth ahead grows from a point of light to a marble to a world ` +
+    `that fills the window — blue, and weather, and everything they know.`,
+    { space: 'coast-home', cam: 'coast-home' }, 9,
+  );
+
+  ret(
+    `Near home, the last piece is shed: the service module — the engine and tanks that ` +
+    `got them there and back — is cut away and falls behind, leaving only the cone ` +
+    `they will ride down, no bigger than a small car, turned to face the air heat ` +
+    `shield first.`,
+    { return: 'sep', cam: 'sep' }, 9,
+  );
+
+  ret(
+    `It hits the atmosphere at about ${RETURN.reentrySpeedKms} kilometres a second — ` +
+    `near the speed it takes to leave the Earth entirely, only now aimed inward. The ` +
+    `air cannot get out of the way fast enough; it compresses, and burns, and wraps ` +
+    `the capsule in a sheath of plasma hotter than the surface of the Sun. For a few ` +
+    `minutes the fire cuts off all radio, and no one on Earth can hear them.`,
+    { return: 'reentry', cam: 'reentry' }, 10,
+  );
+
+  ret(
+    `The fireball fades; the capsule is through, and slowing hard — up to ` +
+    `${RETURN.peakGeeApprox} times their own weight pressing them into their couches. ` +
+    `Small drogue chutes snap out to steady it, and then the three great main canopies ` +
+    `open and catch, and everything goes quiet and slow.`,
+    { return: 'chutes', cam: 'chutes' }, 9,
+  );
+
+  ret(
+    `They come down into ${RETURN.splashdown}, under three orange-and-white parachutes, ` +
+    `and touch the water. From a single number — a seed of history and a stack of ` +
+    `hardware — a machine carried three people to another world and set them back down ` +
+    `on their own, alive. The sea rocks the capsule gently. They are home.`,
+    { return: 'splashdown', cam: 'splashdown' }, 11,
   );
 
   return { title: 'Apollo — The Mission', cues };

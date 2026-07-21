@@ -27,6 +27,13 @@ const BODY = {
   coast:    { earth: [220, 130, 1900, 150], moon: [-30, -10, -430, 120] },
   'lunar-orbit': { earth: [-520, 260, 3400, 150], moon: [0, -30, -240, 150] },
   undock:   { earth: [-520, 260, 3400, 150], moon: [0, -30, -240, 150] },
+  // The return: rendezvous and dock in lunar orbit, jettison the ascent stage,
+  // the trans-Earth burn, and the coast home with Earth swelling ahead.
+  rendezvous: { earth: [-520, 260, 3400, 150], moon: [0, -250, -240, 160] },
+  redock:   { earth: [-500, 250, 3300, 150], moon: [0, -250, -240, 160] },
+  jettison: { earth: [-460, 230, 3100, 150], moon: [40, -260, -300, 160] },
+  tei:      { earth: [-320, 170, 2500, 160], moon: [260, -280, -1400, 150] },
+  'coast-home': { earth: [10, -30, 720, 250], moon: [-280, 160, -3400, 110] },
 };
 
 export class SpaceScene {
@@ -59,6 +66,17 @@ export class SpaceScene {
     this.sivb = buildSIVB(); this.scene.add(this.sivb);
     this.lm = buildLM(); this.scene.add(this.lm);
     this.csm = buildCSM(); this.scene.add(this.csm);
+
+    // SPS engine flame for the trans-Earth burn — behind the service module
+    // bell (-Z), lit only during the TEI beat.
+    this.csmFlame = new THREE.Mesh(
+      new THREE.ConeGeometry(0.85, 4.5, 18, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0x9ecbff, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }),
+    );
+    this.csmFlame.rotation.x = -Math.PI / 2;   // apex toward -Z, trailing the bell
+    this.csmFlame.position.z = -10.5;
+    this.csmFlame.visible = false;
+    this.csm.add(this.csmFlame);
 
     // The S-IVB sits just below the origin, adapter opening up toward the CSM.
     this.sivb.position.set(0, -6, 0);
@@ -128,6 +146,11 @@ export class SpaceScene {
       return;
     }
 
+    if (ph === 'rendezvous' || ph === 'redock' || ph === 'jettison' || ph === 'tei' || ph === 'coast-home') {
+      this._poseReturn(ph, bt);
+      return;
+    }
+
     // Castoff / coast / lunar orbit / undock: the docked pair — CSM nose-down,
     // docked to the LM's top hatch — in the slow "barbecue roll" about the
     // vertical axis that spread the sun's heat evenly on the real coast. On the
@@ -151,6 +174,60 @@ export class SpaceScene {
     this.lm.position.set(0, lmY, 0);
     this.lm.scale.setScalar(1);
     this.lm.quaternion.copy(qRoll);
+  }
+
+  // The return leg: only the ascent stage came up off the surface, so the
+  // descent stage is gone; the command ship (CSM, nose-down) is the hero.
+  _poseReturn(ph, bt) {
+    this.sivb.visible = false;
+    this.lm.userData.descentStage.visible = false;
+    this.lm.scale.setScalar(1);
+    aimY(this.lm, 0, 1, 0);   // ascent stage upright
+
+    const roll = this._t * 0.15;
+    const qDown = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
+    const qRoll = new THREE.Quaternion().setFromAxisAngle(_yv, roll);
+
+    // The ascent stage sits ~4 units above the group origin, so a group Y of
+    // about -6 puts its top hatch just under the command ship's nose.
+    const DOCKED_Y = -6;
+
+    if (ph === 'rendezvous') {
+      this.csm.position.set(0, 3.4, 0);
+      this.csm.quaternion.copy(qDown);
+      this.lm.visible = true;
+      const u = clamp01(bt / 6);
+      this.lm.position.set(0, lerp(-46, DOCKED_Y, u), 0);
+      this.csmFlame.visible = false;
+    } else if (ph === 'redock') {
+      this.csm.position.set(0, 3.4, 0);
+      this.csm.quaternion.copy(qRoll).multiply(qDown);   // barbecue roll resumes
+      this.lm.visible = true;
+      this.lm.position.set(0, DOCKED_Y, 0);
+      this.lm.quaternion.copy(qRoll).multiply(new THREE.Quaternion().setFromUnitVectors(_z, _yv));
+      this.csmFlame.visible = false;
+    } else if (ph === 'jettison') {
+      // The spent ascent stage is cast loose and tumbles away.
+      this.csm.position.set(0, 3.4, 0);
+      this.csm.quaternion.copy(qRoll).multiply(qDown);
+      this.lm.visible = true;
+      this.lm.position.set(-bt * 3.5, DOCKED_Y - bt * 2.2, -bt * 2.0);
+      this.lm.rotation.x += 0.02; this.lm.rotation.z += 0.015;
+      this.csmFlame.visible = false;
+    } else if (ph === 'tei') {
+      // Trans-Earth injection: CSM alone, nose toward Earth, SPS engine lit.
+      this.lm.visible = false;
+      this.csm.position.set(0, 2, 0);
+      this.csm.quaternion.setFromEuler(new THREE.Euler(0, roll * 0.3, 0));  // nose +Z, gentle
+      this.csmFlame.visible = true;
+      const f = 0.85 + Math.random() * 0.3;
+      this.csmFlame.scale.set(f, f, f);
+    } else { // coast-home
+      this.lm.visible = false;
+      this.csm.position.set(0, 2, 0);
+      this.csm.quaternion.copy(qRoll).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0.2, 0, 0)));
+      this.csmFlame.visible = false;
+    }
   }
 
   update(dt) {
@@ -181,6 +258,23 @@ export class SpaceScene {
     } else if (c === 'undock') {
       pos = new THREE.Vector3(14, 6, 26);
       target.copy(this.lm.position).lerp(new THREE.Vector3(0, -2, 0), 0.4);
+    } else if (c === 'rendezvous') {
+      // The ascent stage climbing to the command ship, Moon big below.
+      pos = new THREE.Vector3(15, 1, 26); target.copy(this.lm.position).lerp(new THREE.Vector3(0, 1, 0), 0.5);
+    } else if (c === 'redock') {
+      pos = new THREE.Vector3(10, 3, 16); target.set(0, 0, 0);
+    } else if (c === 'jettison') {
+      pos = new THREE.Vector3(13, 4, 23); target.copy(this.lm.position).lerp(new THREE.Vector3(0, 1, 0), 0.5);
+    } else if (c === 'tei') {
+      // Side-on so the SPS flame trails the bell, Moon dropping behind.
+      pos = new THREE.Vector3(19, 3, 13); target.set(0, 1, -4);
+    } else if (c === 'coast-home') {
+      // View the Earth from its sunlit side so it reads as the blue marble the
+      // crew came home to, swelling to fill the frame.
+      const e = this.earth.position;
+      const lit = new THREE.Vector3(0.78, 0.31, 0.52);   // toward the sun
+      pos = e.clone().addScaledVector(lit, 600);
+      target.copy(e);
     } else pos = new THREE.Vector3(20, 8, 32);
     this.camera.position.lerp(pos, Math.min(1, dt * 2));
     this.camera.lookAt(target);

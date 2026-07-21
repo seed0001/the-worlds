@@ -31,6 +31,7 @@ const run = await p.evaluate(async () => {
   };
   const marks = [];
   const scenes = new Set();
+  let reentryPlasma = 0;
   for (let i = 0; i < A.script.cues.length; i++) {
     const cue = A.script.cues[i];
     try { await A.director(cue); } catch (e) { return { error: 'cue ' + i + ': ' + e.message }; }
@@ -49,15 +50,18 @@ const run = await p.evaluate(async () => {
       if (k % Math.max(1, Math.floor(total / 8)) === 0 || k === total - 1) maxLit = Math.max(maxLit, litPct());
     }
     scenes.add(st.active.constructor.name);
+    if (cue.direct?.return === 'reentry') reentryPlasma = Math.max(reentryPlasma, A.earth.plasma);
     const L = A.launch;
     marks.push({ i, scene: cue.scene, cam: cue.direct?.cam,
       key: cue.direct?.launch ?? cue.direct?.space ?? cue.direct?.moon,
       alt: +L.alt.toFixed(1), lifted: L.lifted, s1c: L.staged.s1c, space: +L._space.toFixed(2),
       lit: +maxLit.toFixed(2) });
   }
-  const M = A.moon;
+  const M = A.moon, E = A.earth;
   return { marks, scenes: [...scenes], landed: M.landed, lmAlt: +M.lmAlt.toFixed(1),
-    crewOut: M.crewOut, flagUp: M.flagUp, roverDeployed: M.roverDeployed, roverDist: +M.roverDist.toFixed(1) };
+    crewOut: M.crewOut, flagUp: M.flagUp, roverDeployed: M.roverDeployed, roverDist: +M.roverDist.toFixed(1),
+    liftedOff: M.liftedOff, ascentAlt: +M.ascentAlt.toFixed(1),
+    reentryPlasma: +reentryPlasma.toFixed(2), splashed: E.splashed };
 });
 
 await b.close();
@@ -65,6 +69,7 @@ console.log('script:', JSON.stringify(info));
 console.log('marks:', JSON.stringify(run.marks ?? run));
 console.log('scenes:', JSON.stringify(run.scenes), 'landed:', run.landed, 'lmAlt:', run.lmAlt);
 console.log('eva:', JSON.stringify({ crewOut: run.crewOut, flagUp: run.flagUp, roverDeployed: run.roverDeployed, roverDist: run.roverDist }));
+console.log('return:', JSON.stringify({ liftedOff: run.liftedOff, ascentAlt: run.ascentAlt, reentryPlasma: run.reentryPlasma, splashed: run.splashed }));
 let bad = false;
 const fail = (m) => { console.error('FAIL:', m); bad = true; };
 if (run.error) fail(run.error);
@@ -77,7 +82,7 @@ if (run.marks) {
   if (!(m[orbitIdx]?.alt > 500)) fail('vehicle never climbed to orbit (alt ' + m[orbitIdx]?.alt + ')');
   if (!m.some((x) => x.s1c)) fail('first stage never separated');
   if (!(m[orbitIdx]?.space > 0.5)) fail('orbit beat not in space (space=' + m[orbitIdx]?.space + ')');
-  for (const s of ['LaunchScene', 'SpaceScene', 'MoonSurfaceScene']) {
+  for (const s of ['LaunchScene', 'SpaceScene', 'MoonSurfaceScene', 'EarthReturnScene']) {
     if (!run.scenes.includes(s)) fail('scene never activated: ' + s);
   }
   if (!run.landed) fail('lander never touched down (lmAlt ' + run.lmAlt + ')');
@@ -86,11 +91,15 @@ if (run.marks) {
   if (!run.flagUp) fail('flag never planted');
   if (!run.roverDeployed) fail('rover never deployed from the lander');
   if (!(run.roverDist > 10)) fail('rover never drove across the surface (dist ' + run.roverDist + ' m)');
+  // Act 4 — the return: liftoff, re-entry fireball, and splashdown.
+  if (!run.liftedOff || !(run.ascentAlt > 20)) fail('ascent stage never lifted off the Moon (alt ' + run.ascentAlt + ')');
+  if (!(run.reentryPlasma > 0.5)) fail('re-entry fireball never built (plasma ' + run.reentryPlasma + ')');
+  if (!run.splashed) fail('capsule never splashed down');
   // No cue may render an (almost) empty frame — the black-shot regression guard.
   const dark = m.filter((x) => x.lit < 0.1);
   if (dark.length) fail('cue(s) render near-empty: ' + dark.map((x) => `${x.i}(${x.cam}=${x.lit}% lit)`).join(', '));
 }
 if (errs.length) { console.log('ERRORS:'); errs.slice(0, 8).forEach((e) => console.log('  ' + e)); process.exit(1); }
 if (bad) process.exit(3);
-console.log('OK: full mission staged — launch to orbit, coast + docking, descent to touchdown, ' +
-  'and the moonwalk: crew out, flag up, rover deployed and driven ' + run.roverDist + ' m.');
+console.log('OK: full mission staged end to end — launch to orbit, coast + docking, descent to touchdown, ' +
+  'the moonwalk (rover driven ' + run.roverDist + ' m), lunar liftoff, re-entry fireball, and splashdown.');
