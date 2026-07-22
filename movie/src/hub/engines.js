@@ -68,6 +68,22 @@ export const ENGINES = [
     year: 'Program II',
   },
   {
+    id: 'pyramids',
+    title: 'The Pyramids',
+    tagline: 'Giza, raised in twenty years.',
+    blurb:
+      'The Old Kingdom, around 2560 BCE: a bare plateau above the Nile, then a ' +
+      'time-lapse of the whole Giza complex rising course by course as the sun ' +
+      'wheels overhead. Gangs haul blocks on sledges, water slicks the sand, and ' +
+      'the Great Pyramid tops out and gleams — before time strips it to the ruin ' +
+      'that still stands. Every figure is history.',
+    href: 'pyramids.html',
+    status: 'live',
+    accent: '#e0b45a',
+    tags: ['recreation', 'narrated', 'grounded'],
+    year: 'Program III',
+  },
+  {
     id: 'engine-3',
     title: 'Untitled Engine',
     tagline: 'Your next generative film.',
