@@ -52,6 +52,22 @@ export const ENGINES = [
     year: 'Program I',
   },
   {
+    id: 'chernobyl',
+    title: 'Chernobyl',
+    tagline: 'The reactor that ran away.',
+    blurb:
+      'The first minutes of 26 April 1986, recreated link by physical link: a ' +
+      'routine safety test, a reactor starved and then over-driven, and the ' +
+      'shutdown button that — through a flaw in the rods — became the trigger. ' +
+      'Told in cross-section of the core itself, as a systems failure, not a ' +
+      'spectacle. Every figure is history.',
+    href: 'chernobyl.html',
+    status: 'live',
+    accent: '#e0b060',
+    tags: ['recreation', 'narrated', 'grounded'],
+    year: 'Program II',
+  },
+  {
     id: 'engine-3',
     title: 'Untitled Engine',
     tagline: 'Your next generative film.',

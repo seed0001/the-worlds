@@ -75,6 +75,7 @@ export default {
         main: resolve(root, 'index.html'),       // the hub — front door, lists every engine
         worlds: resolve(root, 'worlds.html'),     // The Worlds: splash, trailer, episodes
         apollo: resolve(root, 'apollo.html'),     // Apollo — the mission (moon landing recreation)
+        chernobyl: resolve(root, 'chernobyl.html'), // Chernobyl — the reactor (1986 disaster recreation)
         episode1: resolve(root, 'episode1.html'), // legacy deep links, redirects to /worlds.html
         episode2: resolve(root, 'episode2.html'), // Episode 2 — the living world
         set: resolve(root, 'set.html'),           // the set browser (dev tool)
