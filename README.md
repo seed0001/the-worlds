@@ -6,7 +6,7 @@ clock — instead of streaming a saved video. Some engines *generate* their
 subject from a seed; others *recreate* a real one from history. Either way,
 nothing on screen is pre-rendered: open a page and it renders itself.
 
-The front door — the hub at `/` — lists every engine on the shelf. Three are
+The front door — the hub at `/` — lists every engine on the shelf. Five are
 playable today:
 
 | Engine | What it is | Kind | Voice |
@@ -14,6 +14,8 @@ playable today:
 | **The Worlds** | A whole universe — star, chemistry, planets, and the life that does or doesn't take hold — computed from one seed and narrated as a documentary. | generative (seeded) | Andrew / Sonia |
 | **Apollo** | The Moon landing, recreated end to end: the Saturn V on the pad, the ride to orbit, the coast, the landing, the moonwalk, and the fall home to a splashdown. | recreation (history) | Andrew |
 | **Chernobyl** | The destruction of Reactor No. 4 in the first minutes of 26 April 1986, told in cross-section of the core as a systems-and-physics failure. | recreation (history) | Andrew |
+| **The Pyramids** | The Giza complex rising over twenty years, around 2560 BCE — surveying, hauling, the time-lapse climb, the gleaming finish, and the long weathering after. | recreation (history) | Andrew |
+| **Route 66** | The Mother Road driven end to end in the summer of 1957 — eight states of two-lane, state signs and billboards — with the film flashing forward, spot for spot, to the interstate era that killed it. | recreation (history) | Andrew |
 
 > **The one rule that makes them what they are: nothing is canned.** Every fact
 > a narrator speaks is read off the running simulation — this star's mass, this
@@ -156,6 +158,8 @@ own guts:
 | `hub/` | **The front door.** The engine registry (`engines.js`) and the grid that renders it into `index.html`. |
 | `mission/` | **Apollo.** Its facts table (`mission.js`), narration, `scenes/` and `models/`. |
 | `chernobyl/` | **Chernobyl.** Its facts table (`reactor.js`), narration, `scenes/` and `models/`. |
+| `pyramids/` | **The Pyramids.** Its facts table (`giza.js`), narration, `scenes/` and `models/`. |
+| `route66/` | **Route 66.** Its facts table (`route66.js`), narration, `scenes/` and `models/`. |
 | `chemistry/` | *(The Worlds)* Nucleosynthesis and planet condensation — the element budget and each world's physical chemistry. |
 | `cosmos/` | *(The Worlds)* `Cosmos` — a whole universe (star, five planets, the habitability verdict) from one seed. |
 | `world/` | *(The Worlds)* `World` — one planet as the single source of truth: terrain, biome, atmosphere, flora/fauna budget, and the orbital planet shader. |
@@ -173,6 +177,8 @@ own guts:
 | `worlds.html` | The Worlds: splash, trailer, Episode 1. |
 | `apollo.html` | Apollo — the mission. |
 | `chernobyl.html` | Chernobyl — the reactor. |
+| `pyramids.html` | The Pyramids — Giza rising. |
+| `route66.html` | Route 66 — the Mother Road. |
 | `episode2.html` | The Worlds, Episode 2 direct (`?seed=<seed>`). |
 | `episode1.html` | Legacy deep link, redirects to `/worlds.html`. |
 | `set.html` | Dev tool: a free-fly "set browser" for orbit/surface scenes. |

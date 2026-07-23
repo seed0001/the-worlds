@@ -84,6 +84,22 @@ export const ENGINES = [
     year: 'Program III',
   },
   {
+    id: 'route66',
+    title: 'Route 66',
+    tagline: 'The Mother Road, driven and mourned.',
+    blurb:
+      'The summer of 1957, Chicago to Santa Monica in a two-tone Bel Air: eight ' +
+      'states of two-lane blacktop, state-line signs, billboards and neon — with ' +
+      'the film flashing forward, again and again, to what each stretch is now: ' +
+      'the interstate that replaced it, the towns it left behind. Every date and ' +
+      'mile is history.',
+    href: 'route66.html',
+    status: 'live',
+    accent: '#d86a4a',
+    tags: ['recreation', 'narrated', 'grounded'],
+    year: 'Program IV',
+  },
+  {
     id: 'engine-3',
     title: 'Untitled Engine',
     tagline: 'Your next generative film.',
