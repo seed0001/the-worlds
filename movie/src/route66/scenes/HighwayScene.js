@@ -60,8 +60,9 @@ export class HighwayScene {
     this._odometer = 0;         // metres of world scrolled past, ever
     this._nextPole = 20;
     this._nextShield = 240;
-    this._nextNear = 30;
-    this._nextFar = 60;
+    this._nextNear = 8;
+    this._nextMid = 16;
+    this._nextFar = 30;
 
     this.stateId = 'illinois';
     this._groundTarget = new THREE.Color(DRESSING.illinois.ground);
@@ -74,9 +75,25 @@ export class HighwayScene {
     this.sky = new RoadSky();
     this.scene.add(this.sky.group);
 
+    // A near-white speckle multiplies under the state colour, so the ground
+    // reads as land instead of a paint swatch.
+    const gc = document.createElement('canvas');
+    gc.width = gc.height = 256;
+    const gctx = gc.getContext('2d');
+    gctx.fillStyle = '#f2f2f2';
+    gctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 5000; i++) {
+      const v = 195 + Math.random() * 60 | 0;
+      gctx.fillStyle = `rgb(${v},${v},${v})`;
+      gctx.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2, 1 + Math.random() * 2);
+    }
+    const gtex = new THREE.CanvasTexture(gc);
+    gtex.wrapS = gtex.wrapT = THREE.RepeatWrapping;
+    gtex.repeat.set(90, 90);
+
     this.ground = new THREE.Mesh(
       new THREE.PlaneGeometry(2400, ROAD_LEN + 800),
-      new THREE.MeshStandardMaterial({ color: DRESSING.illinois.ground, roughness: 1 }),
+      new THREE.MeshStandardMaterial({ color: DRESSING.illinois.ground, map: gtex, roughness: 1 }),
     );
     this.ground.rotation.x = -Math.PI / 2;
     this.ground.position.z = -ROAD_LEN / 2 + 200;
@@ -100,6 +117,7 @@ export class HighwayScene {
 
     this.camera.position.set(CAR_X + 2.6, 2.6, 14);
     this.camera.lookAt(CAR_X, 1.2, -40);
+    this._prefill();
     this.ready = true;
   }
 
@@ -225,6 +243,24 @@ export class HighwayScene {
 
   // --------------------------------------------------------------- ambient --
 
+  // One prop from a dressing band, at that band's distance off the shoulder.
+  // Road-parallel props (fences, tree lines) keep their alignment; everything
+  // else lands at a random yaw.
+  _bandProp(band, z) {
+    const d = DRESSING[this.stateId];
+    const kind = d[band][(this.rng() * d[band].length) | 0];
+    const off =
+      kind === 'ridge' ? 420 + this.rng() * 320 :   // its footprint is enormous
+      band === 'near' ? 13 + this.rng() * 26 :
+      band === 'mid' ? 42 + this.rng() * 48 :
+      110 + this.rng() * 200;
+    const side = this.rng() < 0.5 ? -1 : 1;
+    const yaw = kind === 'fence' ? 0 : kind === 'treeline' ? (this.rng() - 0.5) * 0.5 : this.rng() * Math.PI * 2;
+    const prop = this._place(PROPS[kind](this.rng), side * off, z, yaw);
+    if (prop.userData.rotor) (this._spinners ??= new Set()).add(prop);
+    return prop;
+  }
+
   _ambientSpawns(dz) {
     const d = DRESSING[this.stateId];
     this._odometer += dz;
@@ -240,22 +276,37 @@ export class HighwayScene {
       this._nextShield += 380;
       this._place(makeShield(), 8.2, SPAWN_Z);
     }
-    // Near scatter from the state's recipe.
+    // The three scenery bands, each on its state's own cadence.
     if (this._odometer >= this._nextNear) {
-      this._nextNear += 26 + this.rng() * 30;
-      const kind = d.near[(this.rng() * d.near.length) | 0];
-      const side = this.rng() < 0.5 ? -1 : 1;
-      const prop = PROPS[kind](this.rng);
-      this._place(prop, side * (16 + this.rng() * 46), SPAWN_Z, this.rng() * Math.PI * 2);
-      if (prop.userData.rotor) (this._spinners ??= new Set()).add(prop);
+      this._nextNear += d.nearEvery * (0.7 + this.rng() * 0.6);
+      this._bandProp('near', SPAWN_Z);
     }
-    // Far horizon pieces (hills, mesas, derricks) on their own cadence.
-    if (d.farEvery && this._odometer >= this._nextFar) {
-      this._nextFar += d.farEvery + this.rng() * d.farEvery;
-      const kind = d.far[(this.rng() * d.far.length) | 0];
-      const side = this.rng() < 0.5 ? -1 : 1;
-      this._place(PROPS[kind](this.rng), side * (90 + this.rng() * 160), SPAWN_Z - this.rng() * 200);
+    if (this._odometer >= this._nextMid) {
+      this._nextMid += d.midEvery * (0.7 + this.rng() * 0.6);
+      this._bandProp('mid', SPAWN_Z - this.rng() * 60);
     }
+    if (this._odometer >= this._nextFar) {
+      this._nextFar += d.farEvery * (0.7 + this.rng() * 0.6);
+      this._bandProp('far', SPAWN_Z - this.rng() * 200);
+    }
+  }
+
+  // Fill the whole visible corridor at boot, so the first frame is already a
+  // landscape — the streaming spawner only has to keep it fed after that.
+  _prefill() {
+    const d = DRESSING[this.stateId];
+    const run = (every, band, jitter = 0) => {
+      for (let t = every * this.rng(); t < 700; t += every * (0.7 + this.rng() * 0.6)) {
+        this._bandProp(band, 45 - t - this.rng() * jitter);
+      }
+    };
+    run(d.nearEvery, 'near');
+    run(d.midEvery, 'mid', 40);
+    run(d.farEvery, 'far', 150);
+    for (let t = 0; t < 700; t += 42) {
+      this._place(makePole(), (t / 42) % 2 === 0 ? 9.5 : -9.5, 45 - t);
+    }
+    this._place(makeShield(), 8.2, -160);
   }
 
   // ---------------------------------------------------------------- update --

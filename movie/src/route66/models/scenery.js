@@ -210,6 +210,125 @@ function scrub(rng) {
   return m;
 }
 
+// A patch of wheat: a golden pane lying in the field with stalk clusters
+// breaking its edge — Kansas by the square mile.
+function wheat(rng) {
+  const g = new THREE.Group();
+  const w = 18 + rng() * 26, d = 12 + rng() * 16;
+  const field = new THREE.Mesh(new THREE.PlaneGeometry(w, d), M(0xc9a94e));
+  field.rotation.x = -Math.PI / 2;
+  field.position.y = 0.32;
+  g.add(field);
+  const stalk = M(0xd8b95c);
+  for (let i = 0; i < 8; i++) {
+    const c = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9 + rng() * 0.3, 1.6), stalk);
+    c.position.set((rng() - 0.5) * w, 0.5, (rng() - 0.5) * d);
+    g.add(c);
+  }
+  return g;
+}
+
+// Sunflowers on the fencerow — it is the Sunflower State.
+function sunflowers(rng) {
+  const g = new THREE.Group();
+  const stem = M(0x4f6b32);
+  const petal = M(0xe8b423);
+  const heart = M(0x5c4326);
+  for (let i = 0; i < 6 + (rng() * 5 | 0); i++) {
+    const h = 1.5 + rng() * 0.8;
+    const s = new THREE.Mesh(new THREE.BoxGeometry(0.07, h, 0.07), stem);
+    const x = (rng() - 0.5) * 4, z = (rng() - 0.5) * 2.5;
+    s.position.set(x, h / 2, z);
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.08, 8), petal);
+    head.rotation.x = Math.PI / 2.3;
+    head.position.set(x, h + 0.14, z + 0.08);
+    const eye = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.1, 8), heart);
+    eye.rotation.x = Math.PI / 2.3;
+    eye.position.set(x, h + 0.15, z + 0.1);
+    g.add(s, head, eye);
+  }
+  return g;
+}
+
+// The prairie skyline: a grain elevator — white towers by the tracks, visible
+// for twenty miles.
+function grainElevator(rng) {
+  const g = new THREE.Group();
+  const mat = M(0xd8d4c8);
+  const n = 2 + (rng() * 3 | 0);
+  for (let i = 0; i < n; i++) {
+    const h = 14 + rng() * 6;
+    const silo = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, h, 10), mat);
+    silo.position.set(i * 5 - (n * 5) / 2, h / 2, 0);
+    g.add(silo);
+  }
+  const head = new THREE.Mesh(new THREE.BoxGeometry(5, 7, 5), mat);
+  head.position.set(0, 20, 0);
+  g.add(head);
+  return g;
+}
+
+// A butte: the mesa's taller, lonelier cousin, for the far New Mexico horizon.
+function butte(rng, painted = false) {
+  const g = new THREE.Group();
+  const r = 10 + rng() * 16;
+  const h = 22 + rng() * 26;
+  const bands = painted ? [0xb9788a, 0xc99a72, 0xd8b07e] : [0x9c6244, 0xb07a52];
+  let y = 0;
+  bands.forEach((c, i) => {
+    const bh = h * (i === bands.length - 1 ? 0.3 : 0.35);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r * (0.85 - i * 0.12), r * (1 - i * 0.12), bh, 9), M(c));
+    m.position.y = y + bh / 2;
+    y += bh;
+    g.add(m);
+  });
+  return g;
+}
+
+// A distant ridge line, hazed toward the sky — the layer that keeps any
+// horizon from being empty. Placement note: the scene throws these much
+// farther out than other far props (see _bandProp), because their footprint
+// is huge.
+function ridge(rng) {
+  const m = new THREE.Mesh(
+    new THREE.SphereGeometry(110 + rng() * 130, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+    M(0xa8b0ba),
+  );
+  m.scale.y = 0.14 + rng() * 0.08;
+  return m;
+}
+
+// A far tree line — the dark hedge at the edge of a Midwestern field.
+function treeline(rng) {
+  const g = new THREE.Group();
+  const mat = M(0x3d5530);
+  for (let i = 0; i < 6; i++) {
+    const b = new THREE.Mesh(new THREE.SphereGeometry(6 + rng() * 5, 7, 5), mat);
+    b.position.set(i * 9 + (rng() - 0.5) * 4, 3, (rng() - 0.5) * 5);
+    b.scale.y = 0.65;
+    g.add(b);
+  }
+  return g;
+}
+
+// A run of ranch fence along the right-of-way — posts, two rails, Texas miles.
+function fence(rng) {
+  const g = new THREE.Group();
+  const mat = M(0x6b5a44);
+  const len = 26;
+  for (let z = 0; z < len; z += 3.2) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.3, 0.12), mat);
+    post.position.set(0, 0.65, z - len / 2);
+    g.add(post);
+  }
+  for (const y of [0.6, 1.1]) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.08, len), mat);
+    rail.position.set(0, y, 0);
+    g.add(rail);
+  }
+  return g;
+}
+
 function saguaroLikeCactus(rng) {
   // Not strictly 66 country flora everywhere, but the billboards loved them.
   const g = new THREE.Group();
@@ -249,19 +368,66 @@ export const PROPS = {
   mesa: (rng) => mesa(rng, false),
   paintedMesa: (rng) => mesa(rng, true),
   joshua, palm, orangeRow, scrub, cactus: saguaroLikeCactus,
+  wheat, sunflowers, grainElevator, ridge, treeline, fence,
+  butte: (rng) => butte(rng, false),
+  paintedButte: (rng) => butte(rng, true),
 };
 
-// Per-state dressing recipe: ground colour, sky tint, what grows near the
-// road, what stands on the horizon. The scene lerps grounds between states.
+// Per-state dressing recipe — the scenery pass lives here. Three bands, each
+// with its own cadence in metres of road:
+//   near  the shoulder strip (roughly 12–40 m out): what you'd brush driving
+//   mid   the field band (40–90 m): crops, groves, fence lines, homesteads
+//   far   the horizon (100–320 m): hills, mesas, elevators, ridge lines
+// The scene lerps ground colour between states as the line is crossed.
 export const DRESSING = {
-  illinois:   { ground: 0x6d7c42, tint: 0xdcd8b8, near: ['corn', 'corn', 'corn', 'oak'], far: [], farEvery: 0 },
-  missouri:   { ground: 0x5d7040, tint: 0xd6d8b4, near: ['oak', 'oak', 'scrub'], far: ['hill'], farEvery: 130 },
-  kansas:     { ground: 0x8a8456, tint: 0xd8d4ac, near: ['scrub', 'oak'], far: ['chatPile'], farEvery: 100 },
-  oklahoma:   { ground: 0x9c6a48, tint: 0xdcc4a0, near: ['scrub', 'windmill', 'scrub'], far: ['derrick'], farEvery: 90 },
-  texas:      { ground: 0xa8885c, tint: 0xe0d0a8, near: ['scrub', 'windmill'], far: [], farEvery: 0 },
-  newmexico:  { ground: 0xb08258, tint: 0xe0b490, near: ['scrub', 'cactus', 'adobe'], far: ['mesa'], farEvery: 110 },
-  arizona:    { ground: 0xb4835f, tint: 0xe2b494, near: ['scrub', 'cactus', 'joshua'], far: ['paintedMesa'], farEvery: 100 },
-  california: { ground: 0xbfa06a, tint: 0xe6d2a4, near: ['joshua', 'scrub', 'scrub'], far: [], farEvery: 0 },
+  illinois: {
+    ground: 0x6d7c42, tint: 0xdcd8b8,
+    near: ['corn', 'corn', 'corn', 'corn', 'oak', 'scrub'], nearEvery: 11,
+    mid: ['wheat', 'corn', 'treeline'], midEvery: 42,
+    far: ['treeline', 'ridge'], farEvery: 150,
+  },
+  missouri: {
+    ground: 0x5d7040, tint: 0xd6d8b4,
+    near: ['oak', 'oak', 'oak', 'scrub', 'corn'], nearEvery: 12,
+    mid: ['treeline', 'oak', 'treeline'], midEvery: 38,
+    far: ['hill', 'hill', 'treeline'], farEvery: 90,
+  },
+  kansas: {
+    ground: 0x9a8e52, tint: 0xd8d4ac,
+    near: ['sunflowers', 'sunflowers', 'scrub', 'oak'], nearEvery: 12,
+    mid: ['wheat', 'wheat', 'wheat', 'windmill'], midEvery: 30,
+    far: ['grainElevator', 'chatPile', 'treeline'], farEvery: 110,
+  },
+  oklahoma: {
+    ground: 0x9c6a48, tint: 0xdcc4a0,
+    near: ['scrub', 'scrub', 'windmill', 'fence'], nearEvery: 13,
+    mid: ['wheat', 'derrick', 'scrub', 'treeline'], midEvery: 40,
+    far: ['derrick', 'derrick', 'ridge'], farEvery: 80,
+  },
+  texas: {
+    ground: 0xa8885c, tint: 0xe0d0a8,
+    near: ['fence', 'scrub', 'fence', 'windmill', 'scrub'], nearEvery: 13,
+    mid: ['windmill', 'scrub', 'wheat'], midEvery: 46,
+    far: ['grainElevator', 'ridge'], farEvery: 170,
+  },
+  newmexico: {
+    ground: 0xb08258, tint: 0xe0b490,
+    near: ['scrub', 'cactus', 'scrub', 'adobe', 'cactus'], nearEvery: 12,
+    mid: ['adobe', 'cactus', 'scrub', 'paintedButte'], midEvery: 40,
+    far: ['mesa', 'paintedMesa', 'butte', 'ridge'], farEvery: 75,
+  },
+  arizona: {
+    ground: 0xb4835f, tint: 0xe2b494,
+    near: ['cactus', 'cactus', 'scrub', 'joshua', 'cactus', 'pine'], nearEvery: 10,
+    mid: ['cactus', 'paintedButte', 'scrub', 'pine'], midEvery: 36,
+    far: ['paintedMesa', 'paintedMesa', 'butte', 'ridge'], farEvery: 70,
+  },
+  california: {
+    ground: 0xbfa06a, tint: 0xe6d2a4,
+    near: ['joshua', 'joshua', 'scrub', 'cactus', 'scrub'], nearEvery: 11,
+    mid: ['joshua', 'scrub', 'scrub'], midEvery: 40,
+    far: ['ridge', 'ridge'], farEvery: 110,
+  },
 };
 
 // ---------------------------------------------------------- set pieces ----
