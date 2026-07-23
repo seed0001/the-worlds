@@ -77,6 +77,7 @@ export default {
         apollo: resolve(root, 'apollo.html'),     // Apollo — the mission (moon landing recreation)
         chernobyl: resolve(root, 'chernobyl.html'), // Chernobyl — the reactor (1986 disaster recreation)
         pyramids: resolve(root, 'pyramids.html'),   // The Pyramids — Giza rising (Old Kingdom recreation)
+        route66: resolve(root, 'route66.html'),     // Route 66 — the Mother Road (highway history recreation)
         episode1: resolve(root, 'episode1.html'), // legacy deep links, redirects to /worlds.html
         episode2: resolve(root, 'episode2.html'), // Episode 2 — the living world
         set: resolve(root, 'set.html'),           // the set browser (dev tool)
