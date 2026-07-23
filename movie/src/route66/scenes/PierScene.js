@@ -28,7 +28,10 @@ export class PierScene {
 
     this.sky = new RoadSky();
     this.sky.setTint(0xf0c090);
-    this.sky.setTime(0.44);       // golden hour over the water
+    // The day the film has been spending since Chicago ends here: swing the
+    // sky so the sun goes down over the water (-z), dead ahead of the pier.
+    this.sky.group.rotation.y = -Math.PI / 2;
+    this.sky.setTime(0.475);      // sunset over the Pacific
     this.scene.add(this.sky.group);
 
     // The ocean, and the beach the pier walks out over.
@@ -161,7 +164,7 @@ export class PierScene {
       for (const l of this.lamps) l.material.emissiveIntensity = 0;
     } else {
       this.sky.setPresent(false);
-      this.sky.setTime(0.44);
+      this.sky.setTime(0.475);
       this.car.visible = true;
       for (const l of this.lamps) l.material.emissiveIntensity = 1.4;
     }

@@ -53,10 +53,10 @@ timeline.onComplete = () => {
   els.replay.hidden = false;
 };
 
-// Boot on the highway behind the start button: morning light, the city behind.
+// Boot on the highway behind the start button: sunrise, the city behind.
 await stage.activate('highway');
 await readyOf.highway;
-highway.beat({ state: 'illinois', sign: false, cam: 'chase', time: 0.16 });
+highway.beat({ state: 'illinois', sign: false, cam: 'chase', time: 0.05 });
 stage.start();
 
 els.start.addEventListener('click', async () => {

@@ -87,11 +87,13 @@ export class RoadSky {
     if (this.present) {
       u.top.value.copy(NOW_TOP); u.horizon.value.copy(NOW_HZ);
       u.night.value = 0;
-    } else if (e >= 0.32) {
+    } else if (e >= 0.5) {
+      // The warm band is wide on purpose: this film spends its first and last
+      // chapters in low sun, and morning should LOOK like morning.
       u.top.value.copy(DAY_TOP); u.horizon.value.copy(hzDay);
       u.night.value = 0;
     } else if (e >= 0) {
-      const k = e / 0.32;
+      const k = e / 0.5;
       u.top.value.copy(DUSK_TOP).lerp(DAY_TOP, k);
       u.horizon.value.copy(DUSK_HZ).lerp(hzDay, k);
       u.night.value = (1 - k) * 0.45;
@@ -110,8 +112,8 @@ export class RoadSky {
     this.sun.position.copy(this.sunDir).multiplyScalar(400);
     this.sun.target.position.set(0, 0, 0);
 
-    this.hemi.intensity = this.present ? 1.15 : 0.3 + Math.max(0, e) * 0.5;
-    this.ambient.intensity = this.present ? 0.75 : 0.3 + Math.max(0, e) * 0.28;
+    this.hemi.intensity = this.present ? 1.15 : 0.38 + Math.max(0, e) * 0.45;
+    this.ambient.intensity = this.present ? 0.75 : 0.34 + Math.max(0, e) * 0.24;
   }
 
   follow(cam) { this.sky.position.copy(cam.position); }

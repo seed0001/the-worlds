@@ -28,15 +28,17 @@ export function buildRoute66Script() {
 
   // === CHICAGO — WHERE IT BEGINS ===========================================
   say(
-    `Chicago, Illinois. The summer of 1957. On a street corner downtown stands a ` +
-    `small sign: BEGIN U.S. 66. From here, one highway runs ` +
+    `Chicago, Illinois, first light, the summer of 1957. The sun is coming up ` +
+    `over the lake behind us, and on a street corner downtown stands a small ` +
+    `sign: BEGIN U.S. 66. From here, one highway runs ` +
     `${ROAD.miles.toLocaleString()} miles southwest — through ${ROAD.states} states, ` +
     `to the Pacific Ocean at ${FINALE.place}. It was commissioned on ` +
     `${ROAD.commissionedFull}, and by 1938 it was paved every mile of the way. ` +
-    `They call it the Main Street of America.`,
+    `They call it the Main Street of America — and we will drive all of it ` +
+    `between this sunrise and tonight's sunset: one long day, west with the sun.`,
     'highway',
     {
-      state: 'illinois', sign: false, cam: 'front', time: 0.16,
+      state: 'illinois', sign: false, cam: 'front', time: 0.055,
       // The front camera looks back east: the skyline and the BEGIN sign sit
       // behind the car, facing us, and the city recedes as the drive starts.
       spawn: [{ kind: 'skyline', at: -120 }, { kind: 'begin', at: -22, opts: { face: true } }, { kind: 'diner', at: 260 }],
@@ -51,7 +53,7 @@ export function buildRoute66Script() {
     `this one. Nobody on the road today believes that. Watch closely; this film ` +
     `will keep showing you.`,
     'highway',
-    { cam: 'chase', spawn: [{ kind: 'shield', at: 90 }] },
+    { cam: 'chase', time: 0.07, spawn: [{ kind: 'shield', at: 90 }] },
     11,
   );
 
@@ -64,7 +66,7 @@ export function buildRoute66Script() {
     `advertising is part of the geography.`,
     'highway',
     {
-      cam: 'side', time: 0.18,
+      cam: 'side', time: 0.08,
       spawn: [
         { kind: 'billboard', at: 120, opts: { top: 'SEE', main: 'MERAMEC CAVERNS', sub: 'JESSE JAMES HIDEOUT — MISSOURI' } },
         { kind: 'billboard', at: 300, side: -1, opts: { main: 'DINER — ALL NITE', sub: 'STEAKS · PIE · COFFEE', bg: '#1d3a5f' } },
@@ -90,7 +92,7 @@ export function buildRoute66Script() {
     `And back — 1957, engine running. The Mississippi, St. Louis, and Missouri: ` +
     `${mo.miles} miles, the gateway to the West, ${mo.terrain}. `,
     'highway',
-    enter(mo, { cam: 'signview', time: 0.2 }),
+    enter(mo, { cam: 'signview', time: 0.13 }),
     8,
   );
   say(
@@ -127,7 +129,7 @@ export function buildRoute66Script() {
     `first state on the whole road to pave every mile, back in ${ks.firstPaved}. ` +
     `Galena, Riverton, Baxter Springs — and out.`,
     'highway',
-    enter(ks, { cam: 'chase', time: 0.22 }),
+    enter(ks, { cam: 'chase', time: 0.2 }),
     10,
   );
   say(
@@ -147,7 +149,7 @@ export function buildRoute66Script() {
     `${ok.avery.name} of ${ok.avery.town}, ${ok.avery.title}, who bent the national ` +
     `route map through his home state and fought to put a six and a six on the shield.`,
     'highway',
-    enter(ok, { cam: 'signview', time: 0.24 }),
+    enter(ok, { cam: 'signview', time: 0.25 }),
     10,
   );
   say(
@@ -188,7 +190,7 @@ export function buildRoute66Script() {
     `${tx.uDropInn.style}, ${tx.uDropInn.built} — you can see its tower for miles.`,
     'highway',
     enter(tx, {
-      cam: 'chase', time: 0.26,
+      cam: 'chase', time: 0.31,
       spawn: [{ kind: 'billboard', at: 220, opts: { top: tx.uDropInn.town.toUpperCase() + ' — 8 MI', main: 'U-DROP INN', sub: 'EAT · GAS · TOWER OF PIE', bg: '#2e6b60' } }],
     }),
     9,
@@ -228,18 +230,19 @@ export function buildRoute66Script() {
     `mesas and adobe — fewer than there used to be: in ${nm.realignment.year}, ` +
     `${nm.realignment.note}.`,
     'highway',
-    enter(nm, { cam: 'signview', time: 0.4 }),
+    enter(nm, { cam: 'signview', time: 0.38 }),
     9,
   );
   say(
-    `And then, at dusk, the road's own aurora: ${nm.tucumcari.slogan}. The ` +
+    `And as the sun drops toward the mesas, the road's own aurora comes on ` +
+    `early: ${nm.tucumcari.slogan}. The ` +
     `billboards start a hundred miles out and all say the same thing — ` +
     `${nm.tucumcari.rooms.toLocaleString()} rooms, ${nm.tucumcari.blueSwallow.name} ` +
     `with its ${nm.tucumcari.blueSwallow.sign}, every sign in town burning neon at ` +
     `the desert. This is the road at its absolute peak. Drink it in.`,
     'highway',
     {
-      cam: 'side', time: 0.485,
+      cam: 'side', time: 0.43,
       spawn: [
         { kind: 'billboard', at: 130, opts: { top: 'TONITE', main: 'TUCUMCARI', sub: '2000 ROOMS — 66 FLAVORS OF NEON', bg: '#22283a', accent: '#ff4fa0' } },
         { kind: 'neon', at: 300 },
@@ -259,10 +262,10 @@ export function buildRoute66Script() {
   // === ARIZONA ==============================================================
   const az = S.arizona;
   say(
-    `A new morning, and Arizona — ${az.miles} miles of the strangest country on ` +
-    `the road: ${az.terrain}.`,
+    `The light is getting late now, and Arizona spends it on the strangest ` +
+    `country of the whole road — ${az.miles} miles of it: ${az.terrain}.`,
     'highway',
-    enter(az, { cam: 'chase', time: 0.15 }),
+    enter(az, { cam: 'chase', time: 0.455 }),
     8,
   );
   say(
@@ -308,7 +311,7 @@ export function buildRoute66Script() {
     `it at night in overheating cars, and even now drivers time the desert for ` +
     `dawn. Water bags on the bumper. Needles, then nothing.`,
     'highway',
-    enter(ca, { cam: 'wide', time: 0.2 }),
+    enter(ca, { cam: 'wide', time: 0.465 }),
     10,
   );
   say(
@@ -316,7 +319,7 @@ export function buildRoute66Script() {
     `${ca.amboy.note}. A café, a motel, a row of pumps and a tall sign, holding ` +
     `fifty miles of desert together on its own.`,
     'highway',
-    { cam: 'side', time: 0.24, spawn: [{ kind: 'roys', at: 280 }] },
+    { cam: 'side', time: 0.47, spawn: [{ kind: 'roys', at: 280 }] },
     9,
   );
   say(
@@ -335,7 +338,7 @@ export function buildRoute66Script() {
     `thicken, the boulevards begin, and the desert becomes a rumour.`,
     'highway',
     {
-      flash: null, cam: 'chase', time: 0.3,
+      flash: null, cam: 'chase', time: 0.478,
       spawn: [
         { kind: 'prop', at: 60, opts: { prop: 'palm' } }, { kind: 'prop', at: 90, side: -1, opts: { prop: 'palm' } },
         { kind: 'prop', at: 130, opts: { prop: 'orangeRow', off: 22 } }, { kind: 'prop', at: 150, side: -1, opts: { prop: 'orangeRow', off: 22 } },
@@ -350,7 +353,9 @@ export function buildRoute66Script() {
   say(
     `And then there is no more road to build on. ${cap(FINALE.pier)}. ` +
     `${ROAD.miles.toLocaleString()} miles from a street corner in Chicago, U.S. 66 ` +
-    `runs out of continent at the Pacific Ocean. ${cap(FINALE.note)}.`,
+    `runs out of continent at the Pacific Ocean — and the sun that came up over ` +
+    `the lake this morning is going down into the water ahead of the pier. ` +
+    `${cap(FINALE.note)}.`,
     'pier',
     { pier: 'arrive', cam: 'wide' },
     11,
@@ -376,7 +381,7 @@ export function buildRoute66Script() {
     12,
   );
   say(
-    `So the film ends where it likes it best: golden hour, 1957, a ` +
+    `So the film ends where it likes it best: sunset, 1957, a ` +
     `${CAR.twoTone} Bel Air parked under the sign at the end of the trail. Two ` +
     `thousand, four hundred and forty-eight miles — and every one of them, for one ` +
     `more evening, still open. Get your kicks.`,

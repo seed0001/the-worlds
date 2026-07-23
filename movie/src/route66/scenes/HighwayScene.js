@@ -52,8 +52,10 @@ export class HighwayScene {
     this.flashKind = null;
     this._camMode = 'chase';
     this._t = 0;
-    this._time = 0.18;          // morning out of Chicago
-    this._timeTarget = 0.18;
+    // The film is one long day: sunrise over Chicago, noon on the plains,
+    // sunset into the Pacific. Cues push the target west with the sun.
+    this._time = 0.04;
+    this._timeTarget = 0.04;
 
     this._odometer = 0;         // metres of world scrolled past, ever
     this._nextPole = 20;
